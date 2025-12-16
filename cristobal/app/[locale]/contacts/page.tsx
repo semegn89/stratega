@@ -62,8 +62,8 @@ export default function ContactsPage() {
                 {t('phone')}
               </h2>
               <p className="text-secondary-dark text-lg">
-                <a href="tel:+359" className="hover:text-primary transition-colors font-medium">
-                  +359 XXX XXX XXX
+                <a href="tel:+359892054451" className="hover:text-primary transition-colors font-medium">
+                  {t('phoneValue')}
                 </a>
               </p>
             </section>
