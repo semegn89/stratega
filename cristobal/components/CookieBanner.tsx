@@ -6,7 +6,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
 
 export default function CookieBanner() {
-  const t = useTranslations('cookies');
+  const t = useTranslations('legal.cookies');
   const locale = useLocale();
   const [isVisible, setIsVisible] = useState(false);
 
