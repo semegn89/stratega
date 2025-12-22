@@ -6,77 +6,79 @@ import { Package, Briefcase, FileText, CheckCircle2 } from 'lucide-react'
 export default function HomePage() {
   return (
     <div className="flex flex-col">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-20">
+      {/* Hero Section - Clean, Airy */}
+      <section className="bg-background py-24 md:py-32">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Trading Agent — Your Reliable Partner
+          <div className="max-w-3xl mx-auto text-center space-y-8">
+            <h1 className="text-5xl md:text-6xl font-medium tracking-tight text-foreground">
+              Trading Agent
             </h1>
-            <p className="text-xl mb-8 text-blue-100">
-              Showcase of products and services. Fast price requests and commercial proposals from verified suppliers.
+            <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+              Your reliable partner for sourcing and supply operations across Europe
             </p>
-            <div className="flex gap-4 justify-center flex-wrap">
-              <Button asChild size="lg" variant="secondary">
-                <Link href="/catalog">Product Catalog</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white/10">
-                <Link href="/services">Services</Link>
+            <div className="pt-4">
+              <Button asChild size="lg">
+                <Link href="/catalog">Request Price / Commercial Offer</Link>
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-16 bg-gray-50">
+      {/* Features Section - Airy, Clean */}
+      <section className="py-24 md:py-32 bg-muted/30">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Why Choose Us</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
+          <div className="max-w-4xl mx-auto text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-medium tracking-tight mb-4">Why Work With Us</h2>
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              Verified supplier network. Clear workflow. Fast response.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
+            <Card className="border-0 bg-card">
               <CardHeader>
-                <Package className="h-12 w-12 text-blue-600 mb-4" />
+                <Package className="h-8 w-8 text-primary mb-4" strokeWidth={1.5} />
                 <CardTitle>Wide Range</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Thousands of products from verified suppliers with quality guarantee
+                  Products from verified suppliers with quality guarantee
                 </CardDescription>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-0 bg-card">
               <CardHeader>
-                <Briefcase className="h-12 w-12 text-blue-600 mb-4" />
+                <Briefcase className="h-8 w-8 text-primary mb-4" strokeWidth={1.5} />
                 <CardTitle>Professional Services</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Consultations, logistics, customs clearance and much more
+                  End-to-end support for trade and supply operations
                 </CardDescription>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-0 bg-card">
               <CardHeader>
-                <FileText className="h-12 w-12 text-blue-600 mb-4" />
+                <FileText className="h-8 w-8 text-primary mb-4" strokeWidth={1.5} />
                 <CardTitle>Fast Response</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Request processing within 24 hours. Transparent working conditions
+                  Request processing within 24 hours. Transparent terms.
                 </CardDescription>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-0 bg-card">
               <CardHeader>
-                <CheckCircle2 className="h-12 w-12 text-blue-600 mb-4" />
+                <CheckCircle2 className="h-8 w-8 text-primary mb-4" strokeWidth={1.5} />
                 <CardTitle>Reliability</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Operating across Europe. We meet deadlines and guarantee quality
+                  Operating across Europe. We meet deadlines and guarantee quality.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -84,17 +86,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16">
+      {/* CTA Section - Minimal */}
+      <section className="py-24 md:py-32 bg-background">
         <div className="container mx-auto px-4">
-          <div className="bg-blue-600 text-white rounded-lg p-8 text-center">
-            <h2 className="text-3xl font-bold mb-4">Ready to Start Cooperation?</h2>
-            <p className="text-xl mb-6 text-blue-100">
+          <div className="max-w-2xl mx-auto text-center space-y-6">
+            <h2 className="text-3xl md:text-4xl font-medium tracking-tight">Ready to Start Cooperation?</h2>
+            <p className="text-lg text-muted-foreground leading-relaxed">
               Send a price request or order a consultation right now
             </p>
-            <Button asChild size="lg" variant="secondary">
-              <Link href="/catalog">View Catalog</Link>
-            </Button>
+            <div className="pt-2">
+              <Button asChild size="lg">
+                <Link href="/catalog">View Catalog</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>

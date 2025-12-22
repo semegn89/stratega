@@ -63,18 +63,18 @@ export default async function CatalogPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-12">
-        <h1 className="text-4xl font-bold mb-4">Products Catalog</h1>
-        <div className="prose max-w-none mb-6">
-          <p className="text-lg mb-4">
+    <div className="container mx-auto px-4 py-16 md:py-24">
+      <div className="mb-16 md:mb-20 max-w-4xl">
+        <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Products Catalog</h1>
+        <div className="space-y-6 text-base md:text-lg text-muted-foreground leading-relaxed">
+          <p>
             We operate as a trading agent and sourcing partner.
             Our product catalog is a structured showcase of goods supplied by verified manufacturers and distributors across Europe.
           </p>
           
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold mb-4">What we offer:</h2>
-            <ul className="space-y-2 list-disc list-inside">
+          <div>
+            <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">What we offer:</h2>
+            <ul className="space-y-2 list-disc list-inside ml-2">
               <li>Industrial equipment and components</li>
               <li>Construction materials</li>
               <li>Consumer and commercial goods</li>
@@ -83,13 +83,13 @@ export default async function CatalogPage() {
             </ul>
           </div>
 
-          <p className="mb-6">
+          <p>
             All products are available on request. We do not hold stock — we source, negotiate, and deliver based on your requirements.
           </p>
 
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold mb-4">How it works:</h2>
-            <ol className="space-y-2 list-decimal list-inside">
+          <div>
+            <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">How it works:</h2>
+            <ol className="space-y-2 list-decimal list-inside ml-2">
               <li>Choose a product or category</li>
               <li>Send a price request (RFQ)</li>
               <li>We source offers from suppliers</li>
@@ -97,7 +97,7 @@ export default async function CatalogPage() {
             </ol>
           </div>
 
-          <p className="mb-6 font-semibold">
+          <p className="font-medium text-foreground">
             Fast response. Transparent terms. No hidden margins.
           </p>
         </div>
@@ -105,24 +105,24 @@ export default async function CatalogPage() {
 
       {/* Categories */}
       {categories.length > 0 && (
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-6">Categories</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <section className="mb-20 md:mb-24">
+          <h2 className="text-2xl md:text-3xl font-medium tracking-tight mb-12 text-foreground">Categories</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {categories.map((category: CategoryType) => {
               if (!category) return null
               return (
-                <Card key={category.id} className="hover:shadow-lg transition-shadow">
+                <Card key={category.id} className="border-0 bg-card hover:border-border transition-all">
                   <CardHeader>
-                    <CardTitle>{category.name || 'Unnamed Category'}</CardTitle>
+                    <CardTitle className="text-lg">{category.name || 'Unnamed Category'}</CardTitle>
                     {category.description && (
-                      <CardDescription>{category.description}</CardDescription>
+                      <CardDescription className="text-base">{category.description}</CardDescription>
                     )}
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-sm text-muted-foreground mb-6">
                       Products: {category._count?.products || 0}
                     </p>
-                    <Button asChild>
+                    <Button asChild variant="outline" className="w-full">
                       <Link href={`/catalog/category/${category.slug}`}>
                         View Products
                       </Link>
@@ -137,16 +137,16 @@ export default async function CatalogPage() {
 
       {/* Products */}
       <section>
-        <h2 className="text-2xl font-semibold mb-6">Popular Products</h2>
+        <h2 className="text-2xl md:text-3xl font-medium tracking-tight mb-12 text-foreground">Popular Products</h2>
         {products.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
             {products.map((product: ProductType) => {
               if (!product) return null
               const images = parseJsonArray<string>(product.images || null)
               return (
-              <Card key={product.id} className="hover:shadow-lg transition-shadow">
+              <Card key={product.id} className="border-0 bg-card hover:border-border transition-all overflow-hidden">
                 {images.length > 0 && (
-                  <div className="relative h-48 w-full bg-gray-100 rounded-t-lg overflow-hidden">
+                  <div className="relative h-56 w-full bg-muted/30 overflow-hidden">
                     <Image
                       src={images[0]}
                       alt={product.name || 'Product'}
@@ -156,26 +156,26 @@ export default async function CatalogPage() {
                   </div>
                 )}
                 <CardHeader>
-                  <CardTitle className="text-lg">{product.name || 'Unnamed Product'}</CardTitle>
+                  <CardTitle className="text-lg font-medium">{product.name || 'Unnamed Product'}</CardTitle>
                   {product.description && (
-                    <CardDescription className="line-clamp-2">
+                    <CardDescription className="line-clamp-2 text-base">
                       {product.description}
                     </CardDescription>
                   )}
                 </CardHeader>
                 <CardContent>
                   {product.price ? (
-                    <p className="text-xl font-bold mb-4">
+                    <p className="text-lg font-medium mb-6 text-foreground">
                       {product.price} {product.currency || 'EUR'}
                     </p>
                   ) : (
-                    <p className="text-lg font-semibold text-muted-foreground mb-4">
+                    <p className="text-base text-muted-foreground mb-6">
                       Price on request
                     </p>
                   )}
-                  <Button asChild className="w-full">
+                  <Button asChild variant="outline" className="w-full">
                     <Link href={`/catalog/product/${product.slug}`}>
-                      Details
+                      Request Price
                     </Link>
                   </Button>
                 </CardContent>

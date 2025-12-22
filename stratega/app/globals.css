@@ -4,26 +4,27 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* B2B Premium Color Palette */
+    --background: 0 0% 100%; /* White */
+    --foreground: 220 13% 18%; /* Dark graphite text */
+    --card: 0 0% 100%; /* White cards */
+    --card-foreground: 220 13% 18%; /* Dark graphite */
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --popover-foreground: 220 13% 18%;
+    --primary: 217 91% 60%; /* Accent blue - CTA, links */
+    --primary-foreground: 0 0% 100%; /* White text on primary */
+    --secondary: 0 0% 98%; /* Off-white */
+    --secondary-foreground: 220 13% 18%;
+    --muted: 0 0% 96%; /* Very light gray */
+    --muted-foreground: 220 8% 46%; /* Medium gray text */
+    --accent: 0 0% 98%;
+    --accent-foreground: 220 13% 18%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%; /* Very light border */
+    --input: 220 13% 96%; /* Light input background */
+    --ring: 217 91% 60%; /* Focus ring - accent blue */
+    --radius: 0.375rem; /* Slightly smaller radius for modern look */
   }
 
   .dark {
@@ -55,6 +56,26 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Typography - Air Effect */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-medium tracking-tight;
+    line-height: 1.2;
+  }
+  
+  p {
+    line-height: 1.75; /* Increased line height for readability */
+  }
+  
+  /* Smooth transitions */
+  * {
+    transition-property: color, background-color, border-color, opacity, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
   }
 }
 
