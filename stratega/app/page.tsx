@@ -29,7 +29,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Section - Airy, Clean */}
-      <section className="section bg-muted/30">
+      <section className="section bg-[#F9FAFB]">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center mb-16">
             <h2 className="text-[32px] leading-[1.2] tracking-[-0.015em] font-semibold mb-4 text-foreground">Why Work With Us</h2>
