@@ -31,7 +31,7 @@ async function getProduct(slug: string) {
 }
 
 async function getSimilarProducts(categoryId: string, excludeId: string, limit = 4) {
-  return await prisma.product.findMany({
+  const products = await prisma.product.findMany({
     where: {
       categoryId,
       isActive: true,
@@ -40,7 +40,12 @@ async function getSimilarProducts(categoryId: string, excludeId: string, limit =
     take: limit,
     orderBy: { views: 'desc' }
   })
+  return products
 }
+
+type ProductWithRelations = NonNullable<Awaited<ReturnType<typeof getProduct>>>
+type ProductAttribute = ProductWithRelations['attributes'][0]
+type SimilarProduct = Awaited<ReturnType<typeof getSimilarProducts>>[0]
 
 export default async function ProductPage({ params }: { params: { slug: string } }) {
   const product = await getProduct(params.slug)
@@ -162,7 +167,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
           <CardContent>
             <table className="w-full">
               <tbody>
-                {product.attributes.map((attr) => (
+                {product.attributes.map((attr: ProductAttribute) => (
                   <tr key={attr.id} className="border-b">
                     <td className="py-2 font-semibold">{attr.name}</td>
                     <td className="py-2">{attr.value}</td>
@@ -179,7 +184,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
         <section>
           <h2 className="text-2xl font-semibold mb-6">Похожие товары</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {similarProducts.map((similar) => (
+            {similarProducts.map((similar: SimilarProduct) => (
               <Card key={similar.id} className="hover:shadow-lg transition-shadow">
                 {similar.images && similar.images.length > 0 && (
                   <div className="relative h-48 w-full bg-gray-100 rounded-t-lg overflow-hidden">

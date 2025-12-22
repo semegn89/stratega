@@ -18,6 +18,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   ])
 
+  type ProductSitemap = { slug: string; updatedAt: Date }
+  type ServiceSitemap = { slug: string; updatedAt: Date }
+  type CategorySitemap = { slug: string; updatedAt: Date }
+
   const routes = [
     {
       url: baseUrl,
@@ -51,21 +55,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ]
 
-  const productRoutes = products.map((product) => ({
+  const productRoutes = products.map((product: ProductSitemap) => ({
     url: `${baseUrl}/catalog/product/${product.slug}`,
     lastModified: product.updatedAt,
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }))
 
-  const serviceRoutes = services.map((service) => ({
+  const serviceRoutes = services.map((service: ServiceSitemap) => ({
     url: `${baseUrl}/services/${service.slug}`,
     lastModified: service.updatedAt,
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }))
 
-  const categoryRoutes = categories.map((category) => ({
+  const categoryRoutes = categories.map((category: CategorySitemap) => ({
     url: `${baseUrl}/catalog/category/${category.slug}`,
     lastModified: category.updatedAt,
     changeFrequency: 'weekly' as const,

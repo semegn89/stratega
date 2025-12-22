@@ -4,11 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 
 async function getServices() {
-  return await prisma.service.findMany({
+  const services = await prisma.service.findMany({
     where: { isActive: true },
     orderBy: { createdAt: 'desc' }
   })
+  return services
 }
+
+type ServiceType = Awaited<ReturnType<typeof getServices>>[0]
 
 export default async function ServicesPage() {
   const services = await getServices()
@@ -24,7 +27,7 @@ export default async function ServicesPage() {
 
       {services.length > 0 ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((service) => (
+          {services.map((service: ServiceType) => (
             <Card key={service.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle>{service.name}</CardTitle>

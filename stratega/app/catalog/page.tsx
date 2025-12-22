@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 
 async function getCategories() {
-  return await prisma.category.findMany({
+  const categories = await prisma.category.findMany({
     where: { parentId: null },
     include: {
       children: true,
@@ -15,10 +15,11 @@ async function getCategories() {
     },
     orderBy: { order: 'asc' }
   })
+  return categories
 }
 
 async function getProducts(limit = 12) {
-  return await prisma.product.findMany({
+  const products = await prisma.product.findMany({
     where: { isActive: true },
     include: {
       category: true,
@@ -27,7 +28,11 @@ async function getProducts(limit = 12) {
     take: limit,
     orderBy: { createdAt: 'desc' }
   })
+  return products
 }
+
+type CategoryType = Awaited<ReturnType<typeof getCategories>>[0]
+type ProductType = Awaited<ReturnType<typeof getProducts>>[0]
 
 export default async function CatalogPage() {
   const [categories, products] = await Promise.all([
@@ -49,7 +54,7 @@ export default async function CatalogPage() {
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-6">Категории</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {categories.map((category) => (
+            {categories.map((category: CategoryType) => (
               <Card key={category.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <CardTitle>{category.name}</CardTitle>
@@ -78,7 +83,7 @@ export default async function CatalogPage() {
         <h2 className="text-2xl font-semibold mb-6">Популярные товары</h2>
         {products.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product) => (
+            {products.map((product: ProductType) => (
               <Card key={product.id} className="hover:shadow-lg transition-shadow">
                 {product.images && product.images.length > 0 && (
                   <div className="relative h-48 w-full bg-gray-100 rounded-t-lg overflow-hidden">

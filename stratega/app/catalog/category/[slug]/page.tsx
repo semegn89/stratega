@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 
 async function getCategory(slug: string) {
-  return await prisma.category.findUnique({
+  const category = await prisma.category.findUnique({
     where: { slug },
     include: {
       parent: true,
@@ -19,7 +19,12 @@ async function getCategory(slug: string) {
       }
     }
   })
+  return category
 }
+
+type CategoryWithRelations = NonNullable<Awaited<ReturnType<typeof getCategory>>>
+type CategoryChild = CategoryWithRelations['children'][0]
+type CategoryProduct = CategoryWithRelations['products'][0]
 
 export default async function CategoryPage({ params }: { params: { slug: string } }) {
   const category = await getCategory(params.slug)
@@ -59,7 +64,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-6">Подкатегории</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {category.children.map((subcategory) => (
+            {category.children.map((subcategory: CategoryChild) => (
               <Card key={subcategory.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <CardTitle>{subcategory.name}</CardTitle>
@@ -85,7 +90,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
         <h2 className="text-2xl font-semibold mb-6">Товары</h2>
         {category.products && category.products.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {category.products.map((product) => (
+            {category.products.map((product: CategoryProduct) => (
               <Card key={product.id} className="hover:shadow-lg transition-shadow">
                 {product.images && product.images.length > 0 && (
                   <div className="relative h-48 w-full bg-gray-100 rounded-t-lg overflow-hidden">
