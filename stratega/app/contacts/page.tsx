@@ -6,7 +6,7 @@ export default function ContactsPage() {
     <div className="container mx-auto px-4 py-16 md:py-24">
       <div className="max-w-4xl mx-auto mb-12">
         <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Contacts</h1>
-        <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
+        <p className="text-lg md:text-xl text-foreground/90 leading-relaxed">
           Ready to start cooperation or request a price?
         </p>
       </div>

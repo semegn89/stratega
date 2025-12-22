@@ -13,7 +13,7 @@ export default function HomePage() {
             <h1 className="text-[48px] leading-[1.15] tracking-[-0.02em] font-semibold text-foreground">
               Trading Agent
             </h1>
-            <p className="text-xl leading-[1.75] text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-xl leading-[1.75] text-foreground/90 max-w-2xl mx-auto">
               Your reliable partner for sourcing and supply operations across Europe
             </p>
             <div className="pt-4 flex gap-4 justify-center flex-wrap">
@@ -33,7 +33,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center mb-16">
             <h2 className="text-[32px] leading-[1.2] tracking-[-0.015em] font-semibold mb-4 text-foreground">Why Work With Us</h2>
-            <p className="text-lg text-muted-foreground leading-[1.75]">
+            <p className="text-lg text-foreground/90 leading-[1.75]">
               Verified supplier network. Clear workflow. Fast response.
             </p>
           </div>
@@ -94,7 +94,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center space-y-6">
             <h2 className="text-[32px] leading-[1.2] tracking-[-0.015em] font-semibold text-foreground">Ready to Start Cooperation?</h2>
-            <p className="text-lg text-muted-foreground leading-[1.75]">
+            <p className="text-lg text-foreground/90 leading-[1.75]">
               Send a price request or order a consultation right now
             </p>
             <div className="pt-2">

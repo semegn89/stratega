@@ -34,14 +34,14 @@ export default async function ServicesPage() {
     <div className="container mx-auto px-4 py-16 md:py-24">
       <div className="mb-16 md:mb-20 max-w-4xl">
         <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Our Services</h1>
-        <div className="space-y-6 text-base md:text-lg text-muted-foreground leading-relaxed">
-          <p>
+        <div className="space-y-6 text-base md:text-lg text-foreground leading-relaxed">
+          <p className="text-foreground/90">
             STRATEGA-LAM S.R.L. provides end-to-end support for trade and supply operations.
           </p>
 
           <div>
             <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">Core services:</h2>
-            <ul className="space-y-2 list-disc list-inside ml-2">
+            <ul className="space-y-2 list-disc list-inside ml-2 text-foreground/80">
               <li>Product sourcing and supplier search</li>
               <li>Price negotiation and offer comparison</li>
               <li>Commercial proposal preparation</li>
@@ -53,14 +53,14 @@ export default async function ServicesPage() {
 
           <div>
             <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">For whom:</h2>
-            <ul className="space-y-2 list-disc list-inside ml-2">
+            <ul className="space-y-2 list-disc list-inside ml-2 text-foreground/80">
               <li>Businesses looking for reliable suppliers</li>
               <li>Companies entering new markets</li>
               <li>Clients requiring complex or non-standard sourcing</li>
             </ul>
           </div>
 
-          <p>
+          <p className="text-foreground/90">
             We act in your interest and focus on efficiency, deadlines, and risk reduction.
           </p>
         </div>
