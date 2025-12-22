@@ -52,7 +52,7 @@ async function main() {
       country: 'Китай',
       price: 899.99,
       currency: 'EUR',
-      images: ['/placeholder-laptop.jpg'],
+      images: jsonStringify(['/placeholder-laptop.jpg']),
       attributes: {
         create: [
           { name: 'Процессор', value: 'Intel Core i7', type: 'TEXT' },
@@ -73,7 +73,7 @@ async function main() {
       brand: 'Industrial Co',
       country: 'Германия',
       // Цена по запросу
-      images: ['/placeholder-machine.jpg'],
+      images: jsonStringify(['/placeholder-machine.jpg']),
       attributes: {
         create: [
           { name: 'Мощность', value: '5.5 кВт', type: 'TEXT' },
