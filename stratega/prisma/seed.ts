@@ -99,13 +99,13 @@ async function main() {
 
   await prisma.service.create({
     data: {
-      name: 'Консультационные услуги',
+      name: 'Consulting Services',
       slug: 'consulting',
-      description: 'Профессиональные консультации по подбору товаров',
-      fullDescription: '<p>Помогаем выбрать оптимальное решение для вашего бизнеса. Анализ потребностей, подбор поставщиков, сравнение предложений.</p>',
-      category: 'Консалтинг',
-      duration: '1-5 рабочих дней',
-      geography: 'Удаленно / Офис',
+      description: 'Professional product selection consultations',
+      fullDescription: '<p>We help you choose the optimal solution for your business. Needs analysis, supplier selection, proposal comparison.</p>',
+      category: 'Consulting',
+      duration: '1-5 business days',
+      geography: 'Remote / Office',
     },
   })
 
