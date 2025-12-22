@@ -75,35 +75,35 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const similarProducts = await getSimilarProducts(product.categoryId, product.id)
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-16 md:py-24">
       {/* Breadcrumbs */}
-      <nav className="mb-6 text-sm text-muted-foreground">
-        <Link href="/" className="hover:text-primary">Home</Link>
+      <nav className="mb-8 text-sm text-muted-foreground">
+        <Link href="/" className="hover:text-primary transition-colors">Home</Link>
         {' / '}
-        <Link href="/catalog" className="hover:text-primary">Catalog</Link>
+        <Link href="/catalog" className="hover:text-primary transition-colors">Catalog</Link>
         {product.category.parent && (
           <>
             {' / '}
-            <Link href={`/catalog/category/${product.category.parent.slug}`} className="hover:text-primary">
+            <Link href={`/catalog/category/${product.category.parent.slug}`} className="hover:text-primary transition-colors">
               {product.category.parent.name}
             </Link>
           </>
         )}
         {' / '}
-        <Link href={`/catalog/category/${product.category.slug}`} className="hover:text-primary">
+        <Link href={`/catalog/category/${product.category.slug}`} className="hover:text-primary transition-colors">
           {product.category.name}
         </Link>
         {' / '}
         <span className="text-foreground">{product.name}</span>
       </nav>
 
-      <div className="grid lg:grid-cols-2 gap-8 mb-12">
+      <div className="grid lg:grid-cols-2 gap-12 md:gap-16 mb-16">
         {/* Images */}
         <div>
           {(() => {
             const images = parseJsonArray<string>(product.images)
             return images.length > 0 ? (
-              <div className="relative h-96 w-full bg-gray-100 rounded-lg overflow-hidden mb-4">
+              <div className="relative h-[500px] w-full bg-muted/30 rounded-lg overflow-hidden">
                 <Image
                   src={images[0]}
                   alt={product.name}
@@ -112,7 +112,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
                 />
               </div>
             ) : (
-              <div className="h-96 w-full bg-gray-100 rounded-lg flex items-center justify-center">
+              <div className="h-[500px] w-full bg-muted/30 rounded-lg flex items-center justify-center">
                 <span className="text-muted-foreground">No image</span>
               </div>
             )
@@ -120,45 +120,49 @@ export default async function ProductPage({ params }: { params: { slug: string }
         </div>
 
         {/* Product Info */}
-        <div>
-          <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
-          
-          {product.description && (
-            <p className="text-muted-foreground mb-6">{product.description}</p>
-          )}
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-medium tracking-tight mb-4 text-foreground">{product.name}</h1>
+            
+            {product.description && (
+              <p className="text-lg text-muted-foreground leading-relaxed">{product.description}</p>
+            )}
+          </div>
 
           {product.price ? (
-            <p className="text-3xl font-bold mb-6">
+            <p className="text-2xl md:text-3xl font-medium text-foreground">
               {product.price} {product.currency}
             </p>
           ) : (
-            <p className="text-2xl font-semibold text-muted-foreground mb-6">
+            <p className="text-xl text-muted-foreground">
               Price on request
             </p>
           )}
 
-          {product.brand && (
-            <p className="mb-2">
-              <span className="font-semibold">Manufacturer:</span> {product.brand}
-            </p>
-          )}
+          <div className="space-y-2 text-base text-muted-foreground">
+            {product.brand && (
+              <p>
+                <span className="font-medium text-foreground">Manufacturer:</span> {product.brand}
+              </p>
+            )}
 
-          {product.country && (
-            <p className="mb-2">
-              <span className="font-semibold">Country:</span> {product.country}
-            </p>
-          )}
+            {product.country && (
+              <p>
+                <span className="font-medium text-foreground">Country:</span> {product.country}
+              </p>
+            )}
 
-          {product.sku && (
-            <p className="mb-6">
-              <span className="font-semibold">SKU:</span> {product.sku}
-            </p>
-          )}
+            {product.sku && (
+              <p>
+                <span className="font-medium text-foreground">SKU:</span> {product.sku}
+              </p>
+            )}
+          </div>
 
           {/* Request Quote Form */}
-          <Card>
+          <Card className="border-0 bg-card mt-8">
             <CardHeader>
-              <CardTitle>Request Price / Quote</CardTitle>
+              <CardTitle className="text-lg">Request Price / Quote</CardTitle>
             </CardHeader>
             <CardContent>
               <RequestQuoteForm productId={product.id} />
@@ -169,21 +173,21 @@ export default async function ProductPage({ params }: { params: { slug: string }
 
       {/* Full Description */}
       {product.fullDescription && (
-        <Card className="mb-8">
+        <Card className="mb-12 border-0 bg-card">
           <CardHeader>
-            <CardTitle>Description</CardTitle>
+            <CardTitle className="text-lg">Description</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: product.fullDescription }} />
+            <div className="prose max-w-none prose-headings:font-medium prose-p:text-muted-foreground prose-p:leading-relaxed" dangerouslySetInnerHTML={{ __html: product.fullDescription }} />
           </CardContent>
         </Card>
       )}
 
       {/* Attributes */}
       {product.attributes && product.attributes.length > 0 && (
-        <Card className="mb-8">
+        <Card className="mb-12 border-0 bg-card">
           <CardHeader>
-            <CardTitle>Specifications</CardTitle>
+            <CardTitle className="text-lg">Specifications</CardTitle>
           </CardHeader>
           <CardContent>
             <table className="w-full">
@@ -203,14 +207,14 @@ export default async function ProductPage({ params }: { params: { slug: string }
       {/* Similar Products */}
       {similarProducts.length > 0 && (
         <section>
-          <h2 className="text-2xl font-semibold mb-6">Similar Products</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <h2 className="text-2xl md:text-3xl font-medium tracking-tight mb-12 text-foreground">Similar Products</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
             {similarProducts.map((similar: SimilarProduct) => {
               const similarImages = parseJsonArray<string>(similar.images)
               return (
-              <Card key={similar.id} className="hover:shadow-lg transition-shadow">
+              <Card key={similar.id} className="border-0 bg-card hover:border-border transition-all overflow-hidden">
                 {similarImages.length > 0 && (
-                  <div className="relative h-48 w-full bg-gray-100 rounded-t-lg overflow-hidden">
+                  <div className="relative h-48 w-full bg-muted/30 overflow-hidden">
                     <Image
                       src={similarImages[0]}
                       alt={similar.name}
@@ -220,10 +224,10 @@ export default async function ProductPage({ params }: { params: { slug: string }
                   </div>
                 )}
                 <CardHeader>
-                  <CardTitle className="text-lg">{similar.name}</CardTitle>
+                  <CardTitle className="text-lg font-medium">{similar.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Button asChild className="w-full">
+                  <Button asChild variant="outline" className="w-full">
                     <Link href={`/catalog/product/${similar.slug}`}>
                       Details
                     </Link>

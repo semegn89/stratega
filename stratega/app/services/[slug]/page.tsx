@@ -25,47 +25,51 @@ export default async function ServicePage({ params }: { params: { slug: string }
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-16 md:py-24">
       {/* Breadcrumbs */}
-      <nav className="mb-6 text-sm text-muted-foreground">
-        <Link href="/" className="hover:text-primary">Home</Link>
+      <nav className="mb-8 text-sm text-muted-foreground">
+        <Link href="/" className="hover:text-primary transition-colors">Home</Link>
         {' / '}
-        <Link href="/services" className="hover:text-primary">Services</Link>
+        <Link href="/services" className="hover:text-primary transition-colors">Services</Link>
         {' / '}
         <span className="text-foreground">{service.name}</span>
       </nav>
 
-      <div className="grid lg:grid-cols-2 gap-8 mb-12">
+      <div className="grid lg:grid-cols-2 gap-12 md:gap-16 mb-16">
         {/* Service Info */}
-        <div>
-          <h1 className="text-3xl font-bold mb-4">{service.name}</h1>
-          
-          {service.description && (
-            <p className="text-muted-foreground mb-6 text-lg">{service.description}</p>
-          )}
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-medium tracking-tight mb-4 text-foreground">{service.name}</h1>
+            
+            {service.description && (
+              <p className="text-lg text-muted-foreground leading-relaxed">{service.description}</p>
+            )}
+          </div>
 
-          {service.duration && (
-            <p className="mb-2">
-              <span className="font-semibold">Duration:</span> {service.duration}
-            </p>
-          )}
+          <div className="space-y-2 text-base text-muted-foreground">
+            {service.duration && (
+              <p>
+                <span className="font-medium text-foreground">Duration:</span> {service.duration}
+              </p>
+            )}
 
-          {service.geography && (
-            <p className="mb-2">
-              <span className="font-semibold">Geography:</span> {service.geography}
-            </p>
-          )}
+            {service.geography && (
+              <p>
+                <span className="font-medium text-foreground">Geography:</span> {service.geography}
+              </p>
+            )}
 
-          {service.category && (
-            <p className="mb-6">
-              <span className="font-semibold">Category:</span> {service.category}
-            </p>
-          )}
+            {service.category && (
+              <p>
+                <span className="font-medium text-foreground">Category:</span> {service.category}
+              </p>
+            )}
+          </div>
 
           {/* Request Consultation Form */}
-          <Card>
+          <Card className="border-0 bg-card mt-8">
             <CardHeader>
-              <CardTitle>Order Consultation / Calculation</CardTitle>
+              <CardTitle className="text-lg">Request Consultation</CardTitle>
             </CardHeader>
             <CardContent>
               <RequestQuoteForm serviceId={service.id} />
@@ -74,36 +78,36 @@ export default async function ServicePage({ params }: { params: { slug: string }
         </div>
 
         {/* Additional Info */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           {service.fullDescription && (
-            <Card>
+            <Card className="border-0 bg-card">
               <CardHeader>
-                <CardTitle>Service Description</CardTitle>
+                <CardTitle className="text-lg">Service Description</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: service.fullDescription }} />
+                <div className="prose max-w-none prose-headings:font-medium prose-p:text-muted-foreground prose-p:leading-relaxed" dangerouslySetInnerHTML={{ __html: service.fullDescription }} />
               </CardContent>
             </Card>
           )}
 
           {service.conditions && (
-            <Card>
+            <Card className="border-0 bg-card">
               <CardHeader>
-                <CardTitle>Terms & Conditions</CardTitle>
+                <CardTitle className="text-lg">Terms & Conditions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: service.conditions }} />
+                <div className="prose max-w-none prose-headings:font-medium prose-p:text-muted-foreground prose-p:leading-relaxed" dangerouslySetInnerHTML={{ __html: service.conditions }} />
               </CardContent>
             </Card>
           )}
 
           {service.faq && (
-            <Card>
+            <Card className="border-0 bg-card">
               <CardHeader>
-                <CardTitle>Frequently Asked Questions</CardTitle>
+                <CardTitle className="text-lg">Frequently Asked Questions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: service.faq }} />
+                <div className="prose max-w-none prose-headings:font-medium prose-p:text-muted-foreground prose-p:leading-relaxed" dangerouslySetInnerHTML={{ __html: service.faq }} />
               </CardContent>
             </Card>
           )}

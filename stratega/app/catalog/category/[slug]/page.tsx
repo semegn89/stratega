@@ -42,16 +42,16 @@ export default async function CategoryPage({ params }: { params: { slug: string 
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-16 md:py-24">
       {/* Breadcrumbs */}
-      <nav className="mb-6 text-sm text-muted-foreground">
-        <Link href="/" className="hover:text-primary">Home</Link>
+      <nav className="mb-8 text-sm text-muted-foreground">
+        <Link href="/" className="hover:text-primary transition-colors">Home</Link>
         {' / '}
-        <Link href="/catalog" className="hover:text-primary">Catalog</Link>
+        <Link href="/catalog" className="hover:text-primary transition-colors">Catalog</Link>
         {category.parent && (
           <>
             {' / '}
-            <Link href={`/catalog/category/${category.parent.slug}`} className="hover:text-primary">
+            <Link href={`/catalog/category/${category.parent.slug}`} className="hover:text-primary transition-colors">
               {category.parent.name}
             </Link>
           </>
@@ -60,28 +60,28 @@ export default async function CategoryPage({ params }: { params: { slug: string 
         <span className="text-foreground">{category.name}</span>
       </nav>
 
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">{category.name}</h1>
+      <div className="mb-12">
+        <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-4 text-foreground">{category.name}</h1>
         {category.description && (
-          <p className="text-muted-foreground text-lg">{category.description}</p>
+          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">{category.description}</p>
         )}
       </div>
 
       {/* Subcategories */}
       {category.children && category.children.length > 0 && (
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-6">Subcategories</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <section className="mb-16 md:mb-20">
+          <h2 className="text-2xl md:text-3xl font-medium tracking-tight mb-12 text-foreground">Subcategories</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {category.children.map((subcategory: CategoryChild) => (
-              <Card key={subcategory.id} className="hover:shadow-lg transition-shadow">
+              <Card key={subcategory.id} className="border-0 bg-card hover:border-border transition-all">
                 <CardHeader>
-                  <CardTitle>{subcategory.name}</CardTitle>
+                  <CardTitle className="text-lg">{subcategory.name}</CardTitle>
                   {subcategory.description && (
-                    <CardDescription>{subcategory.description}</CardDescription>
+                    <CardDescription className="text-base">{subcategory.description}</CardDescription>
                   )}
                 </CardHeader>
                 <CardContent>
-                  <Button asChild>
+                  <Button asChild variant="outline" className="w-full">
                     <Link href={`/catalog/category/${subcategory.slug}`}>
                       View Products
                     </Link>
@@ -95,15 +95,15 @@ export default async function CategoryPage({ params }: { params: { slug: string 
 
       {/* Products */}
       <section>
-        <h2 className="text-2xl font-semibold mb-6">Products</h2>
+        <h2 className="text-2xl md:text-3xl font-medium tracking-tight mb-12 text-foreground">Products</h2>
         {category.products && category.products.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
             {category.products.map((product: CategoryProduct) => {
               const images = parseJsonArray<string>(product.images)
               return (
-              <Card key={product.id} className="hover:shadow-lg transition-shadow">
+              <Card key={product.id} className="border-0 bg-card hover:border-border transition-all overflow-hidden">
                 {images.length > 0 && (
-                  <div className="relative h-48 w-full bg-gray-100 rounded-t-lg overflow-hidden">
+                  <div className="relative h-56 w-full bg-muted/30 overflow-hidden">
                     <Image
                       src={images[0]}
                       alt={product.name}
@@ -113,26 +113,26 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                   </div>
                 )}
                 <CardHeader>
-                  <CardTitle className="text-lg">{product.name}</CardTitle>
+                  <CardTitle className="text-lg font-medium">{product.name}</CardTitle>
                   {product.description && (
-                    <CardDescription className="line-clamp-2">
+                    <CardDescription className="line-clamp-2 text-base">
                       {product.description}
                     </CardDescription>
                   )}
                 </CardHeader>
                 <CardContent>
                   {product.price ? (
-                    <p className="text-xl font-bold mb-4">
+                    <p className="text-lg font-medium mb-6 text-foreground">
                       {product.price} {product.currency}
                     </p>
                   ) : (
-                    <p className="text-lg font-semibold text-muted-foreground mb-4">
+                    <p className="text-base text-muted-foreground mb-6">
                       Price on request
                     </p>
                   )}
-                  <Button asChild className="w-full">
+                  <Button asChild variant="outline" className="w-full">
                     <Link href={`/catalog/product/${product.slug}`}>
-                      Details
+                      Request Price
                     </Link>
                   </Button>
                 </CardContent>
