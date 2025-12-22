@@ -18,7 +18,7 @@ export default function ContactsPage() {
               <CardTitle className="text-lg">Office address</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground leading-relaxed">
+              <p className="text-foreground leading-relaxed">
                 Jud. Vaslui, Municipiul Vaslui<br />
                 Strada Radu Negru, Bl. 274, Scara C, Ap. B14
               </p>
@@ -30,7 +30,7 @@ export default function ContactsPage() {
               <CardTitle className="text-lg">How to contact us</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <ul className="space-y-2 list-disc list-inside text-muted-foreground ml-2">
+              <ul className="space-y-2 list-disc list-inside text-foreground ml-2">
                 <li>Use the request form on the website</li>
                 <li>Send a price request or consultation inquiry</li>
               </ul>

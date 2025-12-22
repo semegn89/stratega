@@ -119,7 +119,7 @@ export default async function CatalogPage() {
                     )}
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground mb-6">
+                    <p className="text-sm text-foreground mb-6">
                       Products: {category._count?.products || 0}
                     </p>
                     <Button asChild variant="outline" className="w-full">
@@ -178,7 +178,7 @@ export default async function CatalogPage() {
                       {product.price} {product.currency || 'EUR'}
                     </p>
                   ) : (
-                    <p className="text-base text-muted-foreground mb-6">
+                    <p className="text-base text-foreground mb-6">
                       Price on request
                     </p>
                   )}
@@ -193,7 +193,7 @@ export default async function CatalogPage() {
             })}
           </div>
         ) : (
-          <p className="text-muted-foreground">No products added yet</p>
+          <p className="text-foreground">No products added yet</p>
         )}
       </section>
     </div>

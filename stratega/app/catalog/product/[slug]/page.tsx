@@ -77,7 +77,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
   return (
     <div className="container mx-auto px-4 py-16 md:py-24">
       {/* Breadcrumbs */}
-      <nav className="mb-8 text-sm text-muted-foreground">
+      <nav className="mb-8 text-sm text-foreground/80">
         <Link href="/" className="hover:text-primary transition-colors">Home</Link>
         {' / '}
         <Link href="/catalog" className="hover:text-primary transition-colors">Catalog</Link>
@@ -130,7 +130,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
             <h1 className="text-3xl md:text-4xl font-medium tracking-tight mb-4 text-foreground">{product.name}</h1>
             
             {product.description && (
-              <p className="text-lg text-muted-foreground leading-relaxed">{product.description}</p>
+              <p className="text-lg text-foreground leading-relaxed">{product.description}</p>
             )}
           </div>
 
@@ -139,12 +139,12 @@ export default async function ProductPage({ params }: { params: { slug: string }
               {product.price} {product.currency}
             </p>
           ) : (
-            <p className="text-xl text-muted-foreground">
+            <p className="text-xl text-foreground">
               Price on request
             </p>
           )}
 
-          <div className="space-y-2 text-base text-muted-foreground">
+          <div className="space-y-2 text-base text-foreground">
             {product.brand && (
               <p>
                 <span className="font-medium text-foreground">Manufacturer:</span> {product.brand}
@@ -183,7 +183,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
             <CardTitle className="text-lg">Description</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="prose max-w-none prose-headings:font-medium prose-p:text-muted-foreground prose-p:leading-relaxed" dangerouslySetInnerHTML={{ __html: product.fullDescription }} />
+            <div className="prose max-w-none prose-headings:font-medium prose-p:text-foreground prose-p:leading-relaxed" dangerouslySetInnerHTML={{ __html: product.fullDescription }} />
           </CardContent>
         </Card>
       )}

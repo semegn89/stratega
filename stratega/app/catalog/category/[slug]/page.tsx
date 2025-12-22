@@ -44,7 +44,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
   return (
     <div className="container mx-auto px-4 py-16 md:py-24">
       {/* Breadcrumbs */}
-      <nav className="mb-8 text-sm text-muted-foreground">
+      <nav className="mb-8 text-sm text-foreground/80">
         <Link href="/" className="hover:text-primary transition-colors">Home</Link>
         {' / '}
         <Link href="/catalog" className="hover:text-primary transition-colors">Catalog</Link>
@@ -63,7 +63,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
       <div className="mb-12">
         <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-4 text-foreground">{category.name}</h1>
         {category.description && (
-          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">{category.description}</p>
+          <p className="text-lg md:text-xl text-foreground leading-relaxed">{category.description}</p>
         )}
       </div>
 
@@ -135,7 +135,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                       {product.price} {product.currency}
                     </p>
                   ) : (
-                    <p className="text-base text-muted-foreground mb-6">
+                    <p className="text-base text-foreground mb-6">
                       Price on request
                     </p>
                   )}
@@ -150,7 +150,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
             })}
           </div>
         ) : (
-          <p className="text-muted-foreground">No products in this category yet</p>
+          <p className="text-foreground">No products in this category yet</p>
         )}
       </section>
     </div>
