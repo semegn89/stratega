@@ -14,27 +14,27 @@ async function main() {
   // Create categories
   const category1 = await prisma.category.create({
     data: {
-      name: 'Электроника',
+      name: 'Electronics',
       slug: 'electronics',
-      description: 'Электронные товары и компоненты',
+      description: 'Electronic products and components',
       order: 1,
     },
   })
 
   const category2 = await prisma.category.create({
     data: {
-      name: 'Оборудование',
+      name: 'Equipment',
       slug: 'equipment',
-      description: 'Промышленное оборудование',
+      description: 'Industrial equipment',
       order: 2,
     },
   })
 
   const subcategory1 = await prisma.category.create({
     data: {
-      name: 'Компьютеры',
+      name: 'Computers',
       slug: 'computers',
-      description: 'Компьютеры и комплектующие',
+      description: 'Computers and components',
       parentId: category1.id,
       order: 1,
     },
@@ -43,21 +43,21 @@ async function main() {
   // Create products
   await prisma.product.create({
     data: {
-      name: 'Ноутбук бизнес-класса',
+      name: 'Business Laptop',
       slug: 'business-laptop',
-      description: 'Надежный ноутбук для бизнеса',
-      fullDescription: '<p>Профессиональный ноутбук с высокими характеристиками для бизнеса.</p>',
+      description: 'Reliable laptop for business',
+      fullDescription: '<p>Professional laptop with high specifications for business.</p>',
       categoryId: subcategory1.id,
       brand: 'Example Brand',
-      country: 'Китай',
+      country: 'China',
       price: 899.99,
       currency: 'EUR',
       images: jsonStringify(['/placeholder-laptop.jpg']),
       attributes: {
         create: [
-          { name: 'Процессор', value: 'Intel Core i7', type: 'TEXT' },
-          { name: 'Память', value: '16 GB', type: 'TEXT' },
-          { name: 'Диск', value: '512 GB SSD', type: 'TEXT' },
+          { name: 'Processor', value: 'Intel Core i7', type: 'TEXT' },
+          { name: 'Memory', value: '16 GB', type: 'TEXT' },
+          { name: 'Storage', value: '512 GB SSD', type: 'TEXT' },
         ],
       },
     },
@@ -65,19 +65,19 @@ async function main() {
 
   await prisma.product.create({
     data: {
-      name: 'Промышленный станок',
+      name: 'Industrial Machine',
       slug: 'industrial-machine',
-      description: 'Современный промышленный станок',
-      fullDescription: '<p>Высокопроизводительный станок для промышленного производства.</p>',
+      description: 'Modern industrial machine',
+      fullDescription: '<p>High-performance machine for industrial production.</p>',
       categoryId: category2.id,
       brand: 'Industrial Co',
-      country: 'Германия',
-      // Цена по запросу
+      country: 'Germany',
+      // Price on request
       images: jsonStringify(['/placeholder-machine.jpg']),
       attributes: {
         create: [
-          { name: 'Мощность', value: '5.5 кВт', type: 'TEXT' },
-          { name: 'Вес', value: '1200 кг', type: 'TEXT' },
+          { name: 'Power', value: '5.5 kW', type: 'TEXT' },
+          { name: 'Weight', value: '1200 kg', type: 'TEXT' },
         ],
       },
     },
@@ -86,14 +86,14 @@ async function main() {
   // Create services
   await prisma.service.create({
     data: {
-      name: 'Логистические услуги',
+      name: 'Logistics Services',
       slug: 'logistics',
-      description: 'Полный комплекс логистических услуг',
-      fullDescription: '<p>Организация доставки грузов по всей Европе. Таможенное оформление, складирование, распределение.</p>',
-      category: 'Логистика',
-      duration: 'По договоренности',
-      geography: 'Европа',
-      conditions: '<p>Работаем с различными типами грузов. Гибкие условия оплаты.</p>',
+      description: 'Full range of logistics services',
+      fullDescription: '<p>Organization of cargo delivery across Europe. Customs clearance, warehousing, distribution.</p>',
+      category: 'Logistics',
+      duration: 'As agreed',
+      geography: 'Europe',
+      conditions: '<p>Working with various types of cargo. Flexible payment terms.</p>',
     },
   })
 
