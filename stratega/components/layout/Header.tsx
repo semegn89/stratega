@@ -26,6 +26,9 @@ export function Header() {
             <Link href="/services" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground">
               Services
             </Link>
+            <Link href="/how-we-work" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground">
+              How We Work
+            </Link>
             <Link href="/about" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground">
               About
             </Link>
@@ -61,6 +64,9 @@ export function Header() {
               </Link>
               <Link href="/services" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                 Services
+              </Link>
+              <Link href="/how-we-work" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
+                How We Work
               </Link>
               <Link href="/about" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                 About

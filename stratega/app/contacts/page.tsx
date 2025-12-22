@@ -29,27 +29,45 @@ export default function ContactsPage() {
         <div className="space-y-8">
           <Card className="border-0 bg-card">
             <CardHeader>
-              <CardTitle className="text-lg">Office address</CardTitle>
+              <CardTitle className="text-lg">Business Contact</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-foreground leading-relaxed">
-                Jud. Vaslui, Municipiul Vaslui<br />
-                Strada Radu Negru, Bl. 274, Scara C, Ap. B14
-              </p>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="font-medium text-foreground mb-2">Business Inquiries:</p>
+                <p className="text-foreground">
+                  <a href="mailto:info@strategalam.com" className="text-primary hover:underline">
+                    info@strategalam.com
+                  </a>
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground mb-2">Compliance & Legal:</p>
+                <p className="text-foreground">
+                  <a href="mailto:compliance@strategalam.com" className="text-primary hover:underline">
+                    compliance@strategalam.com
+                  </a>
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground mb-2">Business Hours:</p>
+                <p className="text-foreground">Monday–Friday, 09:00–17:00 (CET)</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground mb-2">Jurisdiction:</p>
+                <p className="text-foreground">European Union</p>
+              </div>
             </CardContent>
           </Card>
 
           <Card className="border-0 bg-card">
             <CardHeader>
-              <CardTitle className="text-lg">How to contact us</CardTitle>
+              <CardTitle className="text-lg">Office Address</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <ul className="space-y-2 list-disc list-inside text-foreground ml-2">
-                <li>Use the request form on the website</li>
-                <li>Send a price request or consultation inquiry</li>
-              </ul>
-              <p className="font-medium text-foreground pt-2">
-                We respond within one business day.
+            <CardContent>
+              <p className="text-foreground leading-relaxed">
+                Jud. Vaslui, Municipiul Vaslui<br />
+                Strada Radu Negru, Bl. 274, Scara C, Ap. B14<br />
+                Romania
               </p>
             </CardContent>
           </Card>
@@ -64,7 +82,7 @@ export default function ContactsPage() {
           </Card>
         </div>
 
-        <div>
+        <div className="space-y-8">
           <Card className="border-0 bg-card">
             <CardHeader>
               <CardTitle className="text-lg">Company Information</CardTitle>
@@ -74,8 +92,26 @@ export default function ContactsPage() {
                 <p className="font-medium text-foreground">STRATEGA-LAM S.R.L.</p>
                 <p className="text-foreground"><span className="font-medium">CUI:</span> 52815066</p>
                 <p className="text-foreground"><span className="font-medium">EUID:</span> ROONRC.J2025083844000</p>
-                <p className="font-medium text-foreground">Registered in Romania</p>
+                <p className="text-foreground"><span className="font-medium">VAT:</span> Pending registration</p>
+                <p className="text-foreground"><span className="font-medium">Registered:</span> Romania, 2025</p>
+                <p className="text-foreground"><span className="font-medium">Country of Operation:</span> European Union</p>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 bg-card">
+            <CardHeader>
+              <CardTitle className="text-lg">How to Contact Us</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ul className="space-y-2 list-disc list-inside text-foreground ml-2">
+                <li>Use the request form on this page</li>
+                <li>Send a price request or consultation inquiry via email</li>
+                <li>For compliance matters, use the dedicated compliance email</li>
+              </ul>
+              <p className="font-medium text-foreground pt-2">
+                We respond within one business day.
+              </p>
             </CardContent>
           </Card>
         </div>

@@ -8,8 +8,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">1. General Provisions</h2>
             <p>
-              This Privacy Policy defines the procedure for processing and protection 
-              of personal data of users of the STRATEGA-LAM S.R.L. website.
+              Stratega-Lam S.R.L. processes personal data in accordance with the General Data Protection Regulation (GDPR).
+              This Privacy Policy defines the procedure for processing and protection of personal data of users of the STRATEGA-LAM S.R.L. website.
             </p>
           </section>
 
@@ -48,9 +48,29 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">5. Contacts</h2>
+            <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">5. Your Rights</h2>
             <p className="mb-4">
-              For questions regarding personal data processing, please contact:
+              Under GDPR, you have the right to:
+            </p>
+            <ul className="space-y-2 list-disc list-inside ml-2">
+              <li>Access your personal data</li>
+              <li>Request correction of inaccurate data</li>
+              <li>Request deletion of your data</li>
+              <li>Object to processing of your data</li>
+              <li>Data portability</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">6. Contacts</h2>
+            <p className="mb-4">
+              For privacy-related inquiries or to exercise your rights, please contact:
+            </p>
+            <p className="text-foreground mb-2">
+              <strong>Email:</strong>{' '}
+              <a href="mailto:privacy@strategalam.com" className="text-primary hover:underline">
+                privacy@strategalam.com
+              </a>
             </p>
             <p className="text-foreground">
               STRATEGA-LAM S.R.L.<br />

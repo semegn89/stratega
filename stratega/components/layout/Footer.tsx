@@ -8,8 +8,13 @@ export function Footer() {
           <div className="space-y-4">
             <h3 className="font-medium text-base text-foreground">STRATEGA-LAM S.R.L.</h3>
             <p className="text-sm text-foreground/80 leading-relaxed">
-              Trading Agent. Showcase of products and services.
+              European trade representation and sourcing company.
             </p>
+            <div className="text-sm text-foreground/80 space-y-1 leading-relaxed">
+              <p>CUI: 52815066</p>
+              <p>EUID: ROONRC.J2025083844000</p>
+              <p>Registered: Romania, 2025</p>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -26,6 +31,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/how-we-work" className="text-foreground/80 hover:text-primary transition-colors">
+                  How We Work
+                </Link>
+              </li>
+              <li>
                 <Link href="/about" className="text-foreground/80 hover:text-primary transition-colors">
                   About
                 </Link>
@@ -39,8 +49,18 @@ export function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="font-medium text-sm text-foreground">Information</h4>
+            <h4 className="font-medium text-sm text-foreground">Legal & Compliance</h4>
             <ul className="space-y-3 text-sm">
+              <li>
+                <Link href="/compliance" className="text-foreground/80 hover:text-primary transition-colors">
+                  Compliance & Legal
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="text-foreground/80 hover:text-primary transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
               <li>
                 <Link href="/delivery" className="text-foreground/80 hover:text-primary transition-colors">
                   Delivery
@@ -51,21 +71,24 @@ export function Footer() {
                   Guarantees
                 </Link>
               </li>
-              <li>
-                <Link href="/privacy" className="text-foreground/80 hover:text-primary transition-colors">
-                  Privacy Policy
-                </Link>
-              </li>
             </ul>
           </div>
 
           <div className="space-y-4">
-            <h4 className="font-medium text-sm text-foreground">Contacts</h4>
+            <h4 className="font-medium text-sm text-foreground">Contact</h4>
             <div className="text-sm text-foreground/80 space-y-2 leading-relaxed">
-              <p>Jud. Vaslui, Municipiul Vaslui</p>
-              <p>Strada Radu Negru, Bl. 274, Scara C, Ap. B14</p>
-              <p>CUI: 52815066</p>
-              <p>EUID: ROONRC.J2025083844000</p>
+              <p>
+                <a href="mailto:info@strategalam.com" className="hover:text-primary transition-colors">
+                  info@strategalam.com
+                </a>
+              </p>
+              <p>
+                <a href="mailto:compliance@strategalam.com" className="hover:text-primary transition-colors">
+                  compliance@strategalam.com
+                </a>
+              </p>
+              <p className="pt-2">Business Hours:<br />Mon–Fri, 09:00–17:00 (CET)</p>
+              <p className="pt-2">Legal Address:<br />Jud. Vaslui, Municipiul Vaslui<br />Strada Radu Negru, Bl. 274, Scara C, Ap. B14</p>
             </div>
           </div>
         </div>
