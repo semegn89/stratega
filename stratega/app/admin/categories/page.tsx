@@ -58,7 +58,7 @@ export default async function CategoriesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {categories.map((category) => (
+                  {categories.map((category: CategoryWithRelations) => (
                     <tr key={category.id} className="border-b hover:bg-gray-50">
                       <td className="p-2">
                         <Link href={`/catalog/category/${category.slug}`} className="text-blue-600 hover:underline">

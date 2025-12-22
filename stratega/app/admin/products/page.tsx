@@ -55,7 +55,7 @@ export default async function ProductsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((product) => (
+                  {products.map((product: ProductWithCategory) => (
                     <tr key={product.id} className="border-b hover:bg-gray-50">
                       <td className="p-2">
                         <Link href={`/catalog/product/${product.slug}`} className="text-blue-600 hover:underline">

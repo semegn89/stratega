@@ -81,7 +81,7 @@ export default async function RequestsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {requests.map((request) => (
+                  {requests.map((request: RequestWithRelations) => (
                     <tr key={request.id} className="border-b hover:bg-gray-50">
                       <td className="p-2 text-sm">{request.id.slice(0, 8)}...</td>
                       <td className="p-2">

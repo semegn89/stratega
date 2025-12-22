@@ -10,6 +10,8 @@ async function getServices(): Promise<Service[]> {
   })
 }
 
+type ServiceType = Service
+
 export default async function ServicesPage() {
   const services = await getServices()
 
@@ -49,7 +51,7 @@ export default async function ServicesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {services.map((service) => (
+                  {services.map((service: ServiceType) => (
                     <tr key={service.id} className="border-b hover:bg-gray-50">
                       <td className="p-2">
                         <Link href={`/services/${service.slug}`} className="text-blue-600 hover:underline">
