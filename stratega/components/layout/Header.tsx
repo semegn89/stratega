@@ -9,27 +9,27 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-[rgba(252,252,253,0.75)] backdrop-blur-[12px] supports-[backdrop-filter]:bg-[rgba(252,252,253,0.75)]">
       <div className="container mx-auto px-4">
-        <div className="flex h-20 items-center justify-between">
+        <div className="flex h-18 items-center justify-between">
           <Link href="/" className="flex items-center space-x-2 transition-opacity hover:opacity-80">
-            <span className="text-lg font-medium text-foreground tracking-tight">STRATEGA-LAM</span>
+            <span className="text-lg font-semibold text-foreground tracking-tight">STRATEGA-LAM</span>
           </Link>
 
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
+          <nav className="hidden md:flex items-center gap-2">
+            <Link href="/" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground">
               Home
             </Link>
-            <Link href="/catalog" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
+            <Link href="/catalog" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground">
               Products
             </Link>
-            <Link href="/services" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
+            <Link href="/services" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground">
               Services
             </Link>
-            <Link href="/about" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
+            <Link href="/about" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground">
               About
             </Link>
-            <Link href="/contacts" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
+            <Link href="/contacts" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground">
               Contacts
             </Link>
           </nav>
@@ -52,20 +52,20 @@ export function Header() {
 
         {mobileMenuOpen && (
           <div className="md:hidden py-6 border-t border-border/50">
-            <nav className="flex flex-col space-y-4">
-              <Link href="/" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+            <nav className="flex flex-col space-y-2">
+              <Link href="/" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                 Home
               </Link>
-              <Link href="/catalog" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/catalog" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                 Products
               </Link>
-              <Link href="/services" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/services" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                 Services
               </Link>
-              <Link href="/about" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/about" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                 About
               </Link>
-              <Link href="/contacts" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/contacts" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                 Contacts
               </Link>
               <Button asChild variant="ghost" size="sm" className="justify-start">

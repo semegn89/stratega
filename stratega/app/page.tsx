@@ -7,18 +7,21 @@ export default function HomePage() {
   return (
     <div className="flex flex-col">
       {/* Hero Section - Clean, Airy */}
-      <section className="bg-background py-24 md:py-32">
+      <section className="section bg-background">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center space-y-8">
-            <h1 className="text-5xl md:text-6xl font-medium tracking-tight text-foreground">
+            <h1 className="text-[48px] leading-[1.15] tracking-[-0.02em] font-semibold text-foreground">
               Trading Agent
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+            <p className="text-xl leading-[1.75] text-muted-foreground max-w-2xl mx-auto">
               Your reliable partner for sourcing and supply operations across Europe
             </p>
-            <div className="pt-4">
+            <div className="pt-4 flex gap-4 justify-center flex-wrap">
               <Button asChild size="lg">
-                <Link href="/catalog">Request Price / Commercial Offer</Link>
+                <Link href="/catalog">Request Price</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link href="/services">Services</Link>
               </Button>
             </div>
           </div>
@@ -26,16 +29,16 @@ export default function HomePage() {
       </section>
 
       {/* Features Section - Airy, Clean */}
-      <section className="py-24 md:py-32 bg-muted/30">
+      <section className="section bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-medium tracking-tight mb-4">Why Work With Us</h2>
-            <p className="text-lg text-muted-foreground leading-relaxed">
+            <h2 className="text-[32px] leading-[1.2] tracking-[-0.015em] font-semibold mb-4 text-foreground">Why Work With Us</h2>
+            <p className="text-lg text-muted-foreground leading-[1.75]">
               Verified supplier network. Clear workflow. Fast response.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-            <Card className="border-0 bg-card">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            <Card>
               <CardHeader>
                 <Package className="h-8 w-8 text-primary mb-4" strokeWidth={1.5} />
                 <CardTitle>Wide Range</CardTitle>
@@ -47,7 +50,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="border-0 bg-card">
+            <Card>
               <CardHeader>
                 <Briefcase className="h-8 w-8 text-primary mb-4" strokeWidth={1.5} />
                 <CardTitle>Professional Services</CardTitle>
@@ -59,7 +62,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="border-0 bg-card">
+            <Card>
               <CardHeader>
                 <FileText className="h-8 w-8 text-primary mb-4" strokeWidth={1.5} />
                 <CardTitle>Fast Response</CardTitle>
@@ -71,7 +74,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="border-0 bg-card">
+            <Card>
               <CardHeader>
                 <CheckCircle2 className="h-8 w-8 text-primary mb-4" strokeWidth={1.5} />
                 <CardTitle>Reliability</CardTitle>
@@ -87,11 +90,11 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section - Minimal */}
-      <section className="py-24 md:py-32 bg-background">
+      <section className="section bg-background">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center space-y-6">
-            <h2 className="text-3xl md:text-4xl font-medium tracking-tight">Ready to Start Cooperation?</h2>
-            <p className="text-lg text-muted-foreground leading-relaxed">
+            <h2 className="text-[32px] leading-[1.2] tracking-[-0.015em] font-semibold text-foreground">Ready to Start Cooperation?</h2>
+            <p className="text-lg text-muted-foreground leading-[1.75]">
               Send a price request or order a consultation right now
             </p>
             <div className="pt-2">

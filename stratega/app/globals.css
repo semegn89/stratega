@@ -1,30 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* B2B Premium Color Palette */
-    --background: 0 0% 100%; /* White */
-    --foreground: 220 13% 18%; /* Dark graphite text */
-    --card: 0 0% 100%; /* White cards */
-    --card-foreground: 220 13% 18%; /* Dark graphite */
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 13% 18%;
-    --primary: 217 91% 60%; /* Accent blue - CTA, links */
-    --primary-foreground: 0 0% 100%; /* White text on primary */
-    --secondary: 0 0% 98%; /* Off-white */
-    --secondary-foreground: 220 13% 18%;
-    --muted: 0 0% 96%; /* Very light gray */
-    --muted-foreground: 220 8% 46%; /* Medium gray text */
-    --accent: 0 0% 98%;
-    --accent-foreground: 220 13% 18%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 91%; /* Very light border */
-    --input: 220 13% 96%; /* Light input background */
-    --ring: 217 91% 60%; /* Focus ring - accent blue */
-    --radius: 0.375rem; /* Slightly smaller radius for modern look */
+    /* STRATEGA-LAM UI TOKENS v1 - Clean / Airy / Modern B2B */
+    
+    /* Colors */
+    --background: 252 252 253; /* #FCFCFD - off-white background */
+    --foreground: 17 24 39; /* #111827 - graphite text */
+    --card: 255 255 255; /* #FFFFFF - cards / panels */
+    --card-foreground: 17 24 39; /* #111827 - graphite */
+    --popover: 255 255 255;
+    --popover-foreground: 17 24 39;
+    --primary: 37 99 235; /* #2563EB - modern blue accent */
+    --primary-hover: 29 78 216; /* #1D4ED8 - hover state */
+    --primary-foreground: 255 255 255; /* White text on primary */
+    --secondary: 255 255 255; /* White */
+    --secondary-foreground: 17 24 39;
+    --muted: 107 114 128; /* #6B7280 - secondary text */
+    --muted-foreground: 107 114 128;
+    --accent: 37 99 235;
+    --accent-foreground: 17 24 39;
+    --destructive: 220 38 38; /* #DC2626 */
+    --destructive-foreground: 255 255 255;
+    --border: 229 231 235; /* #E5E7EB - subtle borders */
+    --input: 255 255 255;
+    --ring: 37 99 235;
+    --radius: 0.875rem; /* 14px */
+    
+    /* Shadows */
+    --shadow-1: 0 1px 2px rgba(17, 24, 39, 0.06);
+    --shadow-2: 0 8px 24px rgba(17, 24, 39, 0.08);
+    --shadow-3: 0 16px 48px rgba(17, 24, 39, 0.10);
   }
 
   .dark {
@@ -53,29 +63,103 @@
 @layer base {
   * {
     @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    box-sizing: border-box;
   }
   
-  /* Typography - Air Effect */
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-medium tracking-tight;
+  html, body {
+    height: 100%;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Typography Hierarchy */
+  h1 {
+    font-size: 48px;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+    margin: 0 0 24px;
+  }
+  
+  h2 {
+    font-size: 32px;
     line-height: 1.2;
+    letter-spacing: -0.015em;
+    font-weight: 600;
+    margin: 0 0 20px;
+  }
+  
+  h3 {
+    font-size: 24px;
+    line-height: 1.25;
+    font-weight: 500;
+    margin: 0 0 16px;
   }
   
   p {
-    line-height: 1.75; /* Increased line height for readability */
+    font-size: 16px;
+    line-height: 1.75;
+    max-width: 65ch; /* 60-80 characters optimal reading width */
+  }
+  
+  /* Links */
+  a {
+    color: hsl(var(--primary));
+    text-decoration: none;
+    transition: color 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  
+  a:hover {
+    color: hsl(var(--primary-hover));
+  }
+  
+  /* Focus ring for accessibility */
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    border-radius: 12px;
   }
   
   /* Smooth transitions */
   * {
-    transition-property: color, background-color, border-color, opacity, transform;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
+    transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition-duration: 200ms;
+  }
+}
+
+@layer utilities {
+  /* Section spacing */
+  .section {
+    padding-top: 120px;
+    padding-bottom: 120px;
+  }
+  
+  @media (max-width: 768px) {
+    .section {
+      padding-top: 80px;
+      padding-bottom: 80px;
+    }
+    
+    h1 {
+      font-size: 36px;
+    }
+    
+    h2 {
+      font-size: 28px;
+    }
+    
+    h3 {
+      font-size: 20px;
+    }
   }
 }
 

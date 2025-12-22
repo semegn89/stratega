@@ -77,9 +77,9 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
 
   if (submitSuccess) {
     return (
-      <div className="p-6 bg-green-50 border border-green-200 rounded-lg text-center">
-        <p className="text-green-800 font-semibold mb-2">Request submitted successfully!</p>
-        <p className="text-sm text-green-700">We will contact you shortly.</p>
+      <div className="p-6 bg-[rgba(22,163,74,0.08)] border border-[rgba(22,163,74,0.2)] rounded-[18px] text-center">
+        <p className="text-[#16A34A] font-semibold mb-2">Request submitted successfully!</p>
+        <p className="text-sm text-[#16A34A]/80">We will contact you shortly.</p>
       </div>
     )
   }
@@ -94,7 +94,7 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
           placeholder="Your name"
         />
         {errors.name && (
-          <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>
+          <p className="text-sm text-[#DC2626] mt-2">{errors.name.message}</p>
         )}
       </div>
 
@@ -107,7 +107,7 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
           placeholder="your@email.com"
         />
         {errors.email && (
-          <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>
+          <p className="text-sm text-[#DC2626] mt-2">{errors.email.message}</p>
         )}
       </div>
 
@@ -120,7 +120,7 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
           placeholder="+40 123 456 789"
         />
         {errors.phone && (
-          <p className="text-sm text-red-500 mt-1">{errors.phone.message}</p>
+          <p className="text-sm text-[#DC2626] mt-2">{errors.phone.message}</p>
         )}
       </div>
 
