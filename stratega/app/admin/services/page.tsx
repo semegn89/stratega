@@ -2,15 +2,15 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Service } from '@prisma/client'
 
-async function getServices(): Promise<Service[]> {
-  return await prisma.service.findMany({
+async function getServices() {
+  const services = await prisma.service.findMany({
     orderBy: { createdAt: 'desc' }
   })
+  return services
 }
 
-type ServiceType = Service
+type ServiceType = Awaited<ReturnType<typeof getServices>>[0]
 
 export default async function ServicesPage() {
   const services = await getServices()
