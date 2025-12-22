@@ -85,7 +85,7 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div>
         <Label htmlFor="name">Name *</Label>
         <Input

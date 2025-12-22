@@ -31,17 +31,17 @@ export default async function ServicesPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-12">
-        <h1 className="text-4xl font-bold mb-4">Our Services</h1>
-        <div className="prose max-w-none mb-8">
-          <p className="text-lg mb-4">
+    <div className="container mx-auto px-4 py-16 md:py-24">
+      <div className="mb-16 md:mb-20 max-w-4xl">
+        <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Our Services</h1>
+        <div className="space-y-6 text-base md:text-lg text-muted-foreground leading-relaxed">
+          <p>
             STRATEGA-LAM S.R.L. provides end-to-end support for trade and supply operations.
           </p>
 
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold mb-4">Core services:</h2>
-            <ul className="space-y-2 list-disc list-inside">
+          <div>
+            <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">Core services:</h2>
+            <ul className="space-y-2 list-disc list-inside ml-2">
               <li>Product sourcing and supplier search</li>
               <li>Price negotiation and offer comparison</li>
               <li>Commercial proposal preparation</li>
@@ -51,31 +51,31 @@ export default async function ServicesPage() {
             </ul>
           </div>
 
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold mb-4">For whom:</h2>
-            <ul className="space-y-2 list-disc list-inside">
+          <div>
+            <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">For whom:</h2>
+            <ul className="space-y-2 list-disc list-inside ml-2">
               <li>Businesses looking for reliable suppliers</li>
               <li>Companies entering new markets</li>
               <li>Clients requiring complex or non-standard sourcing</li>
             </ul>
           </div>
 
-          <p className="mb-6">
+          <p>
             We act in your interest and focus on efficiency, deadlines, and risk reduction.
           </p>
         </div>
       </div>
 
       {services.length > 0 ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {services.map((service: ServiceType) => {
             if (!service) return null
             return (
-              <Card key={service.id} className="hover:shadow-lg transition-shadow">
+              <Card key={service.id} className="border-0 bg-card hover:border-border transition-all">
                 <CardHeader>
-                  <CardTitle>{service.name || 'Unnamed Service'}</CardTitle>
+                  <CardTitle className="text-lg font-medium">{service.name || 'Unnamed Service'}</CardTitle>
                   {service.description && (
-                    <CardDescription className="line-clamp-3">
+                    <CardDescription className="line-clamp-3 text-base">
                       {service.description}
                     </CardDescription>
                   )}
@@ -87,13 +87,13 @@ export default async function ServicesPage() {
                     </p>
                   )}
                   {service.geography && (
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-sm text-muted-foreground mb-6">
                       Geography: {service.geography}
                     </p>
                   )}
-                  <Button asChild className="w-full">
+                  <Button asChild variant="outline" className="w-full">
                     <Link href={`/services/${service.slug}`}>
-                      Details
+                      Request Consultation
                     </Link>
                   </Button>
                 </CardContent>
@@ -102,7 +102,7 @@ export default async function ServicesPage() {
           })}
         </div>
       ) : (
-        <p className="text-muted-foreground">No services added yet</p>
+        <p className="text-muted-foreground text-lg">No services added yet</p>
       )}
     </div>
   )

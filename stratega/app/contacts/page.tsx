@@ -3,47 +3,46 @@ import { RequestQuoteForm } from '@/components/forms/RequestQuoteForm'
 
 export default function ContactsPage() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-8">Contacts</h1>
-
-      <div className="prose max-w-none mb-8">
-        <p className="text-lg mb-6">
+    <div className="container mx-auto px-4 py-16 md:py-24">
+      <div className="max-w-4xl mx-auto mb-12">
+        <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Contacts</h1>
+        <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
           Ready to start cooperation or request a price?
         </p>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        <div>
-          <Card className="mb-6">
+      <div className="grid lg:grid-cols-2 gap-8 md:gap-12 max-w-6xl mx-auto">
+        <div className="space-y-8">
+          <Card className="border-0 bg-card">
             <CardHeader>
-              <CardTitle>Office address:</CardTitle>
+              <CardTitle className="text-lg">Office address</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground leading-relaxed">
                 Jud. Vaslui, Municipiul Vaslui<br />
                 Strada Radu Negru, Bl. 274, Scara C, Ap. B14
               </p>
             </CardContent>
           </Card>
 
-          <Card className="mb-6">
+          <Card className="border-0 bg-card">
             <CardHeader>
-              <CardTitle>How to contact us:</CardTitle>
+              <CardTitle className="text-lg">How to contact us</CardTitle>
             </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 list-disc list-inside">
+            <CardContent className="space-y-4">
+              <ul className="space-y-2 list-disc list-inside text-muted-foreground ml-2">
                 <li>Use the request form on the website</li>
                 <li>Send a price request or consultation inquiry</li>
               </ul>
-              <p className="mt-4 font-semibold">
+              <p className="font-medium text-foreground pt-2">
                 We respond within one business day.
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-0 bg-card">
             <CardHeader>
-              <CardTitle>Send Request</CardTitle>
+              <CardTitle className="text-lg">Send Request</CardTitle>
             </CardHeader>
             <CardContent>
               <RequestQuoteForm />
@@ -52,16 +51,16 @@ export default function ContactsPage() {
         </div>
 
         <div>
-          <Card>
+          <Card className="border-0 bg-card">
             <CardHeader>
-              <CardTitle>Company Information</CardTitle>
+              <CardTitle className="text-lg">Company Information</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 text-sm">
-                <p><strong>STRATEGA-LAM S.R.L.</strong></p>
-                <p><strong>CUI:</strong> 52815066</p>
-                <p><strong>EUID:</strong> ROONRC.J2025083844000</p>
-                <p><strong>Registered in Romania</strong></p>
+              <div className="space-y-3 text-base text-muted-foreground leading-relaxed">
+                <p className="font-medium text-foreground">STRATEGA-LAM S.R.L.</p>
+                <p><span className="font-medium text-foreground">CUI:</span> 52815066</p>
+                <p><span className="font-medium text-foreground">EUID:</span> ROONRC.J2025083844000</p>
+                <p className="font-medium text-foreground">Registered in Romania</p>
               </div>
             </CardContent>
           </Card>
