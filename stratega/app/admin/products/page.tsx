@@ -2,8 +2,15 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Prisma } from '@prisma/client'
 
-async function getProducts() {
+type ProductWithCategory = Prisma.ProductGetPayload<{
+  include: {
+    category: true
+  }
+}>
+
+async function getProducts(): Promise<ProductWithCategory[]> {
   return await prisma.product.findMany({
     include: {
       category: true

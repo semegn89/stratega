@@ -2,8 +2,18 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Prisma } from '@prisma/client'
 
-async function getCategories() {
+type CategoryWithRelations = Prisma.CategoryGetPayload<{
+  include: {
+    parent: true
+    _count: {
+      select: { products: true, children: true }
+    }
+  }
+}>
+
+async function getCategories(): Promise<CategoryWithRelations[]> {
   return await prisma.category.findMany({
     include: {
       parent: true,

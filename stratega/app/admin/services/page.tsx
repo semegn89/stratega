@@ -2,8 +2,9 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Service } from '@prisma/client'
 
-async function getServices() {
+async function getServices(): Promise<Service[]> {
   return await prisma.service.findMany({
     orderBy: { createdAt: 'desc' }
   })

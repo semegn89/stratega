@@ -3,8 +3,23 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Prisma } from '@prisma/client'
 
-async function getRequests() {
+type RequestWithRelations = Prisma.RequestGetPayload<{
+  include: {
+    product: {
+      select: { name: true, slug: true }
+    }
+    service: {
+      select: { name: true, slug: true }
+    }
+    manager: {
+      select: { name: true, email: true }
+    }
+  }
+}>
+
+async function getRequests(): Promise<RequestWithRelations[]> {
   return await prisma.request.findMany({
     include: {
       product: {
