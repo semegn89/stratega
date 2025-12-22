@@ -48,10 +48,19 @@ type ProductType = Awaited<ReturnType<typeof getProducts>>[0]
 export const dynamic = 'force-dynamic'
 
 export default async function CatalogPage() {
-  const [categories, products] = await Promise.all([
-    getCategories(),
-    getProducts()
-  ])
+  let categories: Awaited<ReturnType<typeof getCategories>> = []
+  let products: Awaited<ReturnType<typeof getProducts>> = []
+  
+  try {
+    [categories, products] = await Promise.all([
+      getCategories(),
+      getProducts()
+    ])
+  } catch (error) {
+    console.error('Error in CatalogPage:', error)
+    categories = []
+    products = []
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -129,21 +138,22 @@ export default async function CatalogPage() {
         {products.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product: ProductType) => {
-              const images = parseJsonArray<string>(product.images)
+              if (!product) return null
+              const images = parseJsonArray<string>(product.images || null)
               return (
               <Card key={product.id} className="hover:shadow-lg transition-shadow">
                 {images.length > 0 && (
                   <div className="relative h-48 w-full bg-gray-100 rounded-t-lg overflow-hidden">
                     <Image
                       src={images[0]}
-                      alt={product.name}
+                      alt={product.name || 'Product'}
                       fill
                       className="object-cover"
                     />
                   </div>
                 )}
                 <CardHeader>
-                  <CardTitle className="text-lg">{product.name}</CardTitle>
+                  <CardTitle className="text-lg">{product.name || 'Unnamed Product'}</CardTitle>
                   {product.description && (
                     <CardDescription className="line-clamp-2">
                       {product.description}
@@ -153,7 +163,7 @@ export default async function CatalogPage() {
                 <CardContent>
                   {product.price ? (
                     <p className="text-xl font-bold mb-4">
-                      {product.price} {product.currency}
+                      {product.price} {product.currency || 'EUR'}
                     </p>
                   ) : (
                     <p className="text-lg font-semibold text-muted-foreground mb-4">

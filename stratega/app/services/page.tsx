@@ -4,11 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 
 async function getServices() {
-  const services = await prisma.service.findMany({
-    where: { isActive: true },
-    orderBy: { createdAt: 'desc' }
-  })
-  return services
+  try {
+    const services = await prisma.service.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' }
+    })
+    return services
+  } catch (error) {
+    console.error('Error fetching services:', error)
+    return []
+  }
 }
 
 type ServiceType = Awaited<ReturnType<typeof getServices>>[0]
@@ -16,7 +21,14 @@ type ServiceType = Awaited<ReturnType<typeof getServices>>[0]
 export const dynamic = 'force-dynamic'
 
 export default async function ServicesPage() {
-  const services = await getServices()
+  let services: Awaited<ReturnType<typeof getServices>> = []
+  
+  try {
+    services = await getServices()
+  } catch (error) {
+    console.error('Error in ServicesPage:', error)
+    services = []
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -56,35 +68,38 @@ export default async function ServicesPage() {
 
       {services.length > 0 ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((service: ServiceType) => (
-            <Card key={service.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle>{service.name}</CardTitle>
-                {service.description && (
-                  <CardDescription className="line-clamp-3">
-                    {service.description}
-                  </CardDescription>
-                )}
-              </CardHeader>
-              <CardContent>
-                {service.duration && (
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Duration: {service.duration}
-                  </p>
-                )}
-                {service.geography && (
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Geography: {service.geography}
-                  </p>
-                )}
-                <Button asChild className="w-full">
-                  <Link href={`/services/${service.slug}`}>
-                    Details
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+          {services.map((service: ServiceType) => {
+            if (!service) return null
+            return (
+              <Card key={service.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle>{service.name || 'Unnamed Service'}</CardTitle>
+                  {service.description && (
+                    <CardDescription className="line-clamp-3">
+                      {service.description}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  {service.duration && (
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Duration: {service.duration}
+                    </p>
+                  )}
+                  {service.geography && (
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Geography: {service.geography}
+                    </p>
+                  )}
+                  <Button asChild className="w-full">
+                    <Link href={`/services/${service.slug}`}>
+                      Details
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       ) : (
         <p className="text-muted-foreground">No services added yet</p>
