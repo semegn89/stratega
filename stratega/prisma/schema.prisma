@@ -1,0 +1,190 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Seed script configuration
+// Run: npm run db:seed
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String?
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  requests      Request[]
+}
+
+enum UserRole {
+  USER
+  MANAGER
+  ADMIN
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  parentId    String?
+  parent      Category? @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Category[] @relation("CategoryTree")
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  order       Int       @default(0)
+
+  @@index([parentId])
+  @@index([slug])
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  description   String?
+  fullDescription String? @db.Text
+  sku           String?
+  price         Float?
+  currency      String    @default("EUR")
+  inStock       Boolean   @default(true)
+  isActive      Boolean   @default(true)
+  categoryId    String
+  category      Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  brand         String?
+  country       String?
+  images        String[]  // JSON array of image URLs
+  documents     String[]  // JSON array of document URLs
+  attributes    ProductAttribute[]
+  requests      Request[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  views         Int       @default(0)
+
+  @@index([categoryId])
+  @@index([slug])
+  @@index([isActive])
+}
+
+model ProductAttribute {
+  id          String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name       String
+  value      String
+  type       AttributeType @default(TEXT)
+
+  @@index([productId])
+}
+
+enum AttributeType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  LIST
+}
+
+model Service {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  description   String?
+  fullDescription String? @db.Text
+  category      String?
+  duration      String?
+  geography     String?
+  conditions    String?   @db.Text
+  faq           String?   @db.Text
+  isActive      Boolean   @default(true)
+  requests      Request[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model Request {
+  id              String        @id @default(cuid())
+  type            RequestType
+  status          RequestStatus @default(NEW)
+  name            String
+  email           String
+  phone           String
+  company         String?
+  city            String?
+  country         String?
+  comment         String?       @db.Text
+  quantity        Float?
+  unit            String?
+  requirements    String?       @db.Text
+  deliveryDate    DateTime?
+  incoterms       String?
+  attachments     String[]      // JSON array of file URLs
+  productId       String?
+  product         Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  serviceId       String?
+  service         Service?      @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  managerId       String?
+  manager         User?         @relation(fields: [managerId], references: [id], onDelete: SetNull)
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  processedAt     DateTime?
+
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum RequestType {
+  PRODUCT_RFQ
+  SERVICE_CONSULTATION
+}
+
+enum RequestStatus {
+  NEW
+  IN_PROGRESS
+  CLARIFICATION
+  QUOTE_SENT
+  CLOSED_SUCCESS
+  CLOSED_FAILED
+}
+
+model Page {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  content     String   @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+}
+
+model Article {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String   @db.Text
+  image       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  publishedAt DateTime?
+
+  @@index([slug])
+  @@index([isActive])
+}
+
