@@ -18,16 +18,10 @@ model User {
   email         String    @unique
   password      String
   name          String?
-  role          UserRole  @default(USER)
+  role          String    @default("USER") // USER, MANAGER, ADMIN
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   requests      Request[]
-}
-
-enum UserRole {
-  USER
-  MANAGER
-  ADMIN
 }
 
 model Category {
@@ -52,7 +46,7 @@ model Product {
   name          String
   slug          String    @unique
   description   String?
-  fullDescription String? @db.Text
+  fullDescription String?
   sku           String?
   price         Float?
   currency      String    @default("EUR")
@@ -62,8 +56,8 @@ model Product {
   category      Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   brand         String?
   country       String?
-  images        String[]  // JSON array of image URLs
-  documents     String[]  // JSON array of document URLs
+  images        String?   // JSON array of image URLs stored as string
+  documents     String?   // JSON array of document URLs stored as string
   attributes    ProductAttribute[]
   requests      Request[]
   createdAt     DateTime  @default(now())
@@ -80,17 +74,10 @@ model ProductAttribute {
   productId  String
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   name       String
-  value      String
-  type       AttributeType @default(TEXT)
+  value       String
+  type        String   @default("TEXT") // TEXT, NUMBER, BOOLEAN, LIST
 
   @@index([productId])
-}
-
-enum AttributeType {
-  TEXT
-  NUMBER
-  BOOLEAN
-  LIST
 }
 
 model Service {
@@ -98,12 +85,12 @@ model Service {
   name          String
   slug          String    @unique
   description   String?
-  fullDescription String? @db.Text
+  fullDescription String?
   category      String?
   duration      String?
   geography     String?
-  conditions    String?   @db.Text
-  faq           String?   @db.Text
+  conditions    String?
+  faq           String?
   isActive      Boolean   @default(true)
   requests      Request[]
   createdAt     DateTime  @default(now())
@@ -115,28 +102,28 @@ model Service {
 
 model Request {
   id              String        @id @default(cuid())
-  type            RequestType
-  status          RequestStatus @default(NEW)
+  type            String        // PRODUCT_RFQ, SERVICE_CONSULTATION
+  status          String        @default("NEW") // NEW, IN_PROGRESS, CLARIFICATION, QUOTE_SENT, CLOSED_SUCCESS, CLOSED_FAILED
   name            String
   email           String
   phone           String
   company         String?
   city            String?
   country         String?
-  comment         String?       @db.Text
+  comment         String?
   quantity        Float?
   unit            String?
-  requirements    String?       @db.Text
+  requirements    String?
   deliveryDate    DateTime?
   incoterms       String?
-  attachments     String[]      // JSON array of file URLs
+  attachments     String?       // JSON array of file URLs stored as string
   productId       String?
   product         Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
   serviceId       String?
   service         Service?      @relation(fields: [serviceId], references: [id], onDelete: SetNull)
   managerId       String?
   manager         User?         @relation(fields: [managerId], references: [id], onDelete: SetNull)
-  notes           String?       @db.Text
+  notes           String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   processedAt     DateTime?
@@ -146,25 +133,11 @@ model Request {
   @@index([createdAt])
 }
 
-enum RequestType {
-  PRODUCT_RFQ
-  SERVICE_CONSULTATION
-}
-
-enum RequestStatus {
-  NEW
-  IN_PROGRESS
-  CLARIFICATION
-  QUOTE_SENT
-  CLOSED_SUCCESS
-  CLOSED_FAILED
-}
-
 model Page {
   id          String   @id @default(cuid())
   title       String
   slug        String   @unique
-  content     String   @db.Text
+  content     String
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -177,7 +150,7 @@ model Article {
   title       String
   slug        String   @unique
   excerpt     String?
-  content     String   @db.Text
+  content     String
   image       String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
