@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Package, Briefcase, FileText, CheckCircle2 } from 'lucide-react'
+import Image from 'next/image'
 
 export default function HomePage() {
   return (
@@ -9,20 +10,31 @@ export default function HomePage() {
       {/* Hero Section - Clean, Airy */}
       <section className="section bg-background">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center space-y-8">
-            <h1 className="text-[48px] leading-[1.15] tracking-[-0.02em] font-semibold text-foreground">
-              Trading Agent
-            </h1>
-            <p className="text-xl leading-[1.75] text-foreground/90 max-w-2xl mx-auto">
-              Your reliable partner for sourcing and supply operations across Europe
-            </p>
-            <div className="pt-4 flex gap-4 justify-center flex-wrap">
-              <Button asChild size="lg">
-                <Link href="/catalog">Request Price</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/services">Services</Link>
-              </Button>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-8">
+              <h1 className="text-[48px] leading-[1.15] tracking-[-0.02em] font-semibold text-foreground">
+                Trading Agent
+              </h1>
+              <p className="text-xl leading-[1.75] text-foreground/90">
+                Your reliable partner for sourcing and supply operations across Europe
+              </p>
+              <div className="pt-4 flex gap-4 flex-wrap">
+                <Button asChild size="lg">
+                  <Link href="/catalog">Request Price</Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link href="/services">Services</Link>
+                </Button>
+              </div>
+            </div>
+            <div className="relative h-[400px] lg:h-[500px] rounded-[18px] overflow-hidden bg-muted/30">
+              <Image
+                src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=600&fit=crop"
+                alt="Business partnership and trade"
+                fill
+                className="object-cover"
+                priority
+              />
             </div>
           </div>
         </div>

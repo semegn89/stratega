@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import Image from 'next/image'
 
 async function getServices() {
   try {
@@ -32,8 +33,10 @@ export default async function ServicesPage() {
 
   return (
     <div className="container mx-auto px-4 py-16 md:py-24">
-      <div className="mb-16 md:mb-20 max-w-4xl">
-        <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Our Services</h1>
+      <div className="mb-16 md:mb-20">
+        <div className="grid lg:grid-cols-2 gap-12 items-center mb-12">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Our Services</h1>
         <div className="space-y-6 text-base md:text-lg text-foreground leading-relaxed">
           <p className="text-foreground/90">
             STRATEGA-LAM S.R.L. provides end-to-end support for trade and supply operations.
@@ -63,6 +66,16 @@ export default async function ServicesPage() {
           <p className="text-foreground/90">
             We act in your interest and focus on efficiency, deadlines, and risk reduction.
           </p>
+          </div>
+          <div className="relative h-[400px] lg:h-[500px] rounded-[18px] overflow-hidden bg-muted/30">
+            <Image
+              src="https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=600&fit=crop"
+              alt="Professional services"
+              fill
+              className="object-cover"
+              priority
+            />
+          </div>
         </div>
       </div>
 

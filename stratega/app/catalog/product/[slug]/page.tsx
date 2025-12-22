@@ -112,8 +112,13 @@ export default async function ProductPage({ params }: { params: { slug: string }
                 />
               </div>
             ) : (
-              <div className="h-[500px] w-full bg-muted/30 rounded-lg flex items-center justify-center">
-                <span className="text-muted-foreground">No image</span>
+              <div className="relative h-[500px] w-full bg-muted/30 rounded-lg overflow-hidden">
+                <Image
+                  src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800&h=600&fit=crop"
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                />
               </div>
             )
           })()}
@@ -213,10 +218,19 @@ export default async function ProductPage({ params }: { params: { slug: string }
               const similarImages = parseJsonArray<string>(similar.images)
               return (
               <Card key={similar.id} className="border-0 bg-card hover:border-border transition-all overflow-hidden">
-                {similarImages.length > 0 && (
+                {similarImages.length > 0 ? (
                   <div className="relative h-48 w-full bg-muted/30 overflow-hidden">
                     <Image
                       src={similarImages[0]}
+                      alt={similar.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="relative h-48 w-full bg-muted/30 overflow-hidden">
+                    <Image
+                      src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop"
                       alt={similar.name}
                       fill
                       className="object-cover"

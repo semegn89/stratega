@@ -145,10 +145,19 @@ export default async function CatalogPage() {
               const images = parseJsonArray<string>(product.images || null)
               return (
               <Card key={product.id} className="border-0 bg-card hover:border-border transition-all overflow-hidden">
-                {images.length > 0 && (
+                {images.length > 0 ? (
                   <div className="relative h-56 w-full bg-muted/30 overflow-hidden">
                     <Image
                       src={images[0]}
+                      alt={product.name || 'Product'}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="relative h-56 w-full bg-muted/30 overflow-hidden">
+                    <Image
+                      src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop"
                       alt={product.name || 'Product'}
                       fill
                       className="object-cover"
