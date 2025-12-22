@@ -24,24 +24,24 @@ export default async function ProductsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-4xl font-bold mb-4">Товары</h1>
+          <h1 className="text-4xl font-bold mb-4">Products</h1>
           <p className="text-muted-foreground">
-            Управление товарами
+            Manage products
           </p>
         </div>
         <div className="flex gap-2">
           <Button asChild>
-            <Link href="/admin/products/new">Добавить товар</Link>
+            <Link href="/admin/products/new">Add Product</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/admin">Назад</Link>
+            <Link href="/admin">Back</Link>
           </Button>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Список товаров</CardTitle>
+          <CardTitle>Products List</CardTitle>
         </CardHeader>
         <CardContent>
           {products.length > 0 ? (
@@ -49,11 +49,11 @@ export default async function ProductsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-2">Название</th>
-                    <th className="text-left p-2">Категория</th>
-                    <th className="text-left p-2">Цена</th>
-                    <th className="text-left p-2">Статус</th>
-                    <th className="text-left p-2">Действия</th>
+                    <th className="text-left p-2">Name</th>
+                    <th className="text-left p-2">Category</th>
+                    <th className="text-left p-2">Price</th>
+                    <th className="text-left p-2">Status</th>
+                    <th className="text-left p-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -66,16 +66,16 @@ export default async function ProductsPage() {
                       </td>
                       <td className="p-2">{product.category.name}</td>
                       <td className="p-2">
-                        {product.price ? `${product.price} ${product.currency}` : 'По запросу'}
+                        {product.price ? `${product.price} ${product.currency}` : 'On request'}
                       </td>
                       <td className="p-2">
                         <span className={`px-2 py-1 rounded text-white text-xs ${product.isActive ? 'bg-green-500' : 'bg-gray-500'}`}>
-                          {product.isActive ? 'Активен' : 'Неактивен'}
+                          {product.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="p-2">
                         <Button asChild size="sm" variant="outline">
-                          <Link href={`/admin/products/${product.id}`}>Редактировать</Link>
+                          <Link href={`/admin/products/${product.id}`}>Edit</Link>
                         </Button>
                       </td>
                     </tr>
@@ -84,7 +84,7 @@ export default async function ProductsPage() {
               </table>
             </div>
           ) : (
-            <p className="text-muted-foreground">Товары пока не добавлены</p>
+            <p className="text-muted-foreground">No products added yet</p>
           )}
         </CardContent>
       </Card>

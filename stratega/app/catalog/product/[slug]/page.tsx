@@ -63,9 +63,9 @@ export default async function ProductPage({ params }: { params: { slug: string }
     <div className="container mx-auto px-4 py-8">
       {/* Breadcrumbs */}
       <nav className="mb-6 text-sm text-muted-foreground">
-        <Link href="/" className="hover:text-primary">Главная</Link>
+        <Link href="/" className="hover:text-primary">Home</Link>
         {' / '}
-        <Link href="/catalog" className="hover:text-primary">Каталог</Link>
+        <Link href="/catalog" className="hover:text-primary">Catalog</Link>
         {product.category.parent && (
           <>
             {' / '}
@@ -98,7 +98,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
               </div>
             ) : (
               <div className="h-96 w-full bg-gray-100 rounded-lg flex items-center justify-center">
-                <span className="text-muted-foreground">Нет изображения</span>
+                <span className="text-muted-foreground">No image</span>
               </div>
             )
           })()}
@@ -118,32 +118,32 @@ export default async function ProductPage({ params }: { params: { slug: string }
             </p>
           ) : (
             <p className="text-2xl font-semibold text-muted-foreground mb-6">
-              Цена по запросу
+              Price on request
             </p>
           )}
 
           {product.brand && (
             <p className="mb-2">
-              <span className="font-semibold">Производитель:</span> {product.brand}
+              <span className="font-semibold">Manufacturer:</span> {product.brand}
             </p>
           )}
 
           {product.country && (
             <p className="mb-2">
-              <span className="font-semibold">Страна:</span> {product.country}
+              <span className="font-semibold">Country:</span> {product.country}
             </p>
           )}
 
           {product.sku && (
             <p className="mb-6">
-              <span className="font-semibold">Артикул:</span> {product.sku}
+              <span className="font-semibold">SKU:</span> {product.sku}
             </p>
           )}
 
           {/* Request Quote Form */}
           <Card>
             <CardHeader>
-              <CardTitle>Запросить цену / КП</CardTitle>
+              <CardTitle>Request Price / Quote</CardTitle>
             </CardHeader>
             <CardContent>
               <RequestQuoteForm productId={product.id} />
@@ -156,7 +156,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
       {product.fullDescription && (
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Описание</CardTitle>
+            <CardTitle>Description</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: product.fullDescription }} />
@@ -168,7 +168,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
       {product.attributes && product.attributes.length > 0 && (
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Характеристики</CardTitle>
+            <CardTitle>Specifications</CardTitle>
           </CardHeader>
           <CardContent>
             <table className="w-full">
@@ -188,7 +188,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
       {/* Similar Products */}
       {similarProducts.length > 0 && (
         <section>
-          <h2 className="text-2xl font-semibold mb-6">Похожие товары</h2>
+          <h2 className="text-2xl font-semibold mb-6">Similar Products</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {similarProducts.map((similar: SimilarProduct) => {
               const similarImages = parseJsonArray<string>(similar.images)
@@ -210,7 +210,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
                 <CardContent>
                   <Button asChild className="w-full">
                     <Link href={`/catalog/product/${similar.slug}`}>
-                      Подробнее
+                      Details
                     </Link>
                   </Button>
                 </CardContent>

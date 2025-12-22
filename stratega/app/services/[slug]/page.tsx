@@ -23,9 +23,9 @@ export default async function ServicePage({ params }: { params: { slug: string }
     <div className="container mx-auto px-4 py-8">
       {/* Breadcrumbs */}
       <nav className="mb-6 text-sm text-muted-foreground">
-        <Link href="/" className="hover:text-primary">Главная</Link>
+        <Link href="/" className="hover:text-primary">Home</Link>
         {' / '}
-        <Link href="/services" className="hover:text-primary">Услуги</Link>
+        <Link href="/services" className="hover:text-primary">Services</Link>
         {' / '}
         <span className="text-foreground">{service.name}</span>
       </nav>
@@ -41,26 +41,26 @@ export default async function ServicePage({ params }: { params: { slug: string }
 
           {service.duration && (
             <p className="mb-2">
-              <span className="font-semibold">Срок выполнения:</span> {service.duration}
+              <span className="font-semibold">Duration:</span> {service.duration}
             </p>
           )}
 
           {service.geography && (
             <p className="mb-2">
-              <span className="font-semibold">География:</span> {service.geography}
+              <span className="font-semibold">Geography:</span> {service.geography}
             </p>
           )}
 
           {service.category && (
             <p className="mb-6">
-              <span className="font-semibold">Категория:</span> {service.category}
+              <span className="font-semibold">Category:</span> {service.category}
             </p>
           )}
 
           {/* Request Consultation Form */}
           <Card>
             <CardHeader>
-              <CardTitle>Заказать консультацию / расчёт</CardTitle>
+              <CardTitle>Order Consultation / Calculation</CardTitle>
             </CardHeader>
             <CardContent>
               <RequestQuoteForm serviceId={service.id} />
@@ -73,7 +73,7 @@ export default async function ServicePage({ params }: { params: { slug: string }
           {service.fullDescription && (
             <Card>
               <CardHeader>
-                <CardTitle>Описание услуги</CardTitle>
+                <CardTitle>Service Description</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: service.fullDescription }} />
@@ -84,7 +84,7 @@ export default async function ServicePage({ params }: { params: { slug: string }
           {service.conditions && (
             <Card>
               <CardHeader>
-                <CardTitle>Условия</CardTitle>
+                <CardTitle>Terms & Conditions</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: service.conditions }} />
@@ -95,7 +95,7 @@ export default async function ServicePage({ params }: { params: { slug: string }
           {service.faq && (
             <Card>
               <CardHeader>
-                <CardTitle>Часто задаваемые вопросы</CardTitle>
+                <CardTitle>Frequently Asked Questions</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: service.faq }} />

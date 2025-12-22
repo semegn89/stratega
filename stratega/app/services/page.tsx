@@ -21,9 +21,9 @@ export default async function ServicesPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">Услуги</h1>
+        <h1 className="text-4xl font-bold mb-4">Services</h1>
         <p className="text-muted-foreground">
-          Профессиональные услуги для вашего бизнеса
+          Professional services for your business
         </p>
       </div>
 
@@ -42,17 +42,17 @@ export default async function ServicesPage() {
               <CardContent>
                 {service.duration && (
                   <p className="text-sm text-muted-foreground mb-2">
-                    Срок: {service.duration}
+                    Duration: {service.duration}
                   </p>
                 )}
                 {service.geography && (
                   <p className="text-sm text-muted-foreground mb-4">
-                    География: {service.geography}
+                    Geography: {service.geography}
                   </p>
                 )}
                 <Button asChild className="w-full">
                   <Link href={`/services/${service.slug}`}>
-                    Подробнее
+                    Details
                   </Link>
                 </Button>
               </CardContent>
@@ -60,7 +60,7 @@ export default async function ServicesPage() {
           ))}
         </div>
       ) : (
-        <p className="text-muted-foreground">Услуги пока не добавлены</p>
+        <p className="text-muted-foreground">No services added yet</p>
       )}
     </div>
   )

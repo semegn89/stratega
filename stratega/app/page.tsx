@@ -11,17 +11,17 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Торговый агент — ваш надежный партнер
+              Trading Agent — Your Reliable Partner
             </h1>
             <p className="text-xl mb-8 text-blue-100">
-              Витрина товаров и услуг. Быстрый запрос цен и коммерческих предложений от проверенных поставщиков.
+              Showcase of products and services. Fast price requests and commercial proposals from verified suppliers.
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
               <Button asChild size="lg" variant="secondary">
-                <Link href="/catalog">Каталог товаров</Link>
+                <Link href="/catalog">Product Catalog</Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white/10">
-                <Link href="/services">Услуги</Link>
+                <Link href="/services">Services</Link>
               </Button>
             </div>
           </div>
@@ -31,16 +31,16 @@ export default function HomePage() {
       {/* Features Section */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Почему мы</h2>
+          <h2 className="text-3xl font-bold text-center mb-12">Why Choose Us</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
               <CardHeader>
                 <Package className="h-12 w-12 text-blue-600 mb-4" />
-                <CardTitle>Широкий ассортимент</CardTitle>
+                <CardTitle>Wide Range</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Тысячи товаров от проверенных поставщиков с гарантией качества
+                  Thousands of products from verified suppliers with quality guarantee
                 </CardDescription>
               </CardContent>
             </Card>
@@ -48,11 +48,11 @@ export default function HomePage() {
             <Card>
               <CardHeader>
                 <Briefcase className="h-12 w-12 text-blue-600 mb-4" />
-                <CardTitle>Профессиональные услуги</CardTitle>
+                <CardTitle>Professional Services</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Консультации, логистика, таможенное оформление и многое другое
+                  Consultations, logistics, customs clearance and much more
                 </CardDescription>
               </CardContent>
             </Card>
@@ -60,11 +60,11 @@ export default function HomePage() {
             <Card>
               <CardHeader>
                 <FileText className="h-12 w-12 text-blue-600 mb-4" />
-                <CardTitle>Быстрый ответ</CardTitle>
+                <CardTitle>Fast Response</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Обработка заявок в течение 24 часов. Прозрачные условия работы
+                  Request processing within 24 hours. Transparent working conditions
                 </CardDescription>
               </CardContent>
             </Card>
@@ -72,11 +72,11 @@ export default function HomePage() {
             <Card>
               <CardHeader>
                 <CheckCircle2 className="h-12 w-12 text-blue-600 mb-4" />
-                <CardTitle>Надежность</CardTitle>
+                <CardTitle>Reliability</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Работаем по всей Европе. Соблюдаем сроки и гарантируем качество
+                  Operating across Europe. We meet deadlines and guarantee quality
                 </CardDescription>
               </CardContent>
             </Card>
@@ -88,12 +88,12 @@ export default function HomePage() {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="bg-blue-600 text-white rounded-lg p-8 text-center">
-            <h2 className="text-3xl font-bold mb-4">Готовы начать сотрудничество?</h2>
+            <h2 className="text-3xl font-bold mb-4">Ready to Start Cooperation?</h2>
             <p className="text-xl mb-6 text-blue-100">
-              Отправьте запрос цены или закажите консультацию прямо сейчас
+              Send a price request or order a consultation right now
             </p>
             <Button asChild size="lg" variant="secondary">
-              <Link href="/catalog">Посмотреть каталог</Link>
+              <Link href="/catalog">View Catalog</Link>
             </Button>
           </div>
         </div>

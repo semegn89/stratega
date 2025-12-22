@@ -40,9 +40,9 @@ export default async function CategoryPage({ params }: { params: { slug: string 
     <div className="container mx-auto px-4 py-8">
       {/* Breadcrumbs */}
       <nav className="mb-6 text-sm text-muted-foreground">
-        <Link href="/" className="hover:text-primary">Главная</Link>
+        <Link href="/" className="hover:text-primary">Home</Link>
         {' / '}
-        <Link href="/catalog" className="hover:text-primary">Каталог</Link>
+        <Link href="/catalog" className="hover:text-primary">Catalog</Link>
         {category.parent && (
           <>
             {' / '}
@@ -65,7 +65,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
       {/* Subcategories */}
       {category.children && category.children.length > 0 && (
         <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-6">Подкатегории</h2>
+          <h2 className="text-2xl font-semibold mb-6">Subcategories</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {category.children.map((subcategory: CategoryChild) => (
               <Card key={subcategory.id} className="hover:shadow-lg transition-shadow">
@@ -78,7 +78,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                 <CardContent>
                   <Button asChild>
                     <Link href={`/catalog/category/${subcategory.slug}`}>
-                      Смотреть товары
+                      View Products
                     </Link>
                   </Button>
                 </CardContent>
@@ -90,7 +90,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
 
       {/* Products */}
       <section>
-        <h2 className="text-2xl font-semibold mb-6">Товары</h2>
+        <h2 className="text-2xl font-semibold mb-6">Products</h2>
         {category.products && category.products.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {category.products.map((product: CategoryProduct) => {
@@ -122,12 +122,12 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                     </p>
                   ) : (
                     <p className="text-lg font-semibold text-muted-foreground mb-4">
-                      Цена по запросу
+                      Price on request
                     </p>
                   )}
                   <Button asChild className="w-full">
                     <Link href={`/catalog/product/${product.slug}`}>
-                      Подробнее
+                      Details
                     </Link>
                   </Button>
                 </CardContent>
@@ -136,7 +136,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
             })}
           </div>
         ) : (
-          <p className="text-muted-foreground">В этой категории пока нет товаров</p>
+          <p className="text-muted-foreground">No products in this category yet</p>
         )}
       </section>
     </div>

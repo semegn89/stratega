@@ -1,55 +1,55 @@
 export default function PrivacyPage() {
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-8">Политика конфиденциальности</h1>
+      <h1 className="text-4xl font-bold mb-8">Privacy Policy</h1>
 
       <div className="prose max-w-none space-y-6">
         <section>
-          <h2 className="text-2xl font-semibold mb-4">1. Общие положения</h2>
+          <h2 className="text-2xl font-semibold mb-4">1. General Provisions</h2>
           <p>
-            Настоящая Политика конфиденциальности определяет порядок обработки и защиты 
-            персональных данных пользователей сайта STRATEGA-LAM S.R.L.
+            This Privacy Policy defines the procedure for processing and protection 
+            of personal data of users of the STRATEGA-LAM S.R.L. website.
           </p>
         </section>
 
         <section>
-          <h2 className="text-2xl font-semibold mb-4">2. Сбор персональных данных</h2>
+          <h2 className="text-2xl font-semibold mb-4">2. Collection of Personal Data</h2>
           <p>
-            Мы собираем следующие персональные данные:
+            We collect the following personal data:
           </p>
           <ul>
-            <li>Имя и контактная информация (email, телефон)</li>
-            <li>Информация о компании</li>
-            <li>Данные, предоставленные в формах заявок</li>
-            <li>Технические данные (IP-адрес, cookies)</li>
+            <li>Name and contact information (email, phone)</li>
+            <li>Company information</li>
+            <li>Data provided in request forms</li>
+            <li>Technical data (IP address, cookies)</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="text-2xl font-semibold mb-4">3. Использование данных</h2>
+          <h2 className="text-2xl font-semibold mb-4">3. Use of Data</h2>
           <p>
-            Персональные данные используются для:
+            Personal data is used for:
           </p>
           <ul>
-            <li>Обработки заявок и запросов</li>
-            <li>Связи с клиентами</li>
-            <li>Улучшения качества обслуживания</li>
-            <li>Аналитики и статистики</li>
+            <li>Processing requests and inquiries</li>
+            <li>Contacting clients</li>
+            <li>Improving service quality</li>
+            <li>Analytics and statistics</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="text-2xl font-semibold mb-4">4. Защита данных</h2>
+          <h2 className="text-2xl font-semibold mb-4">4. Data Protection</h2>
           <p>
-            Мы применяем современные методы защиты персональных данных от несанкционированного 
-            доступа, изменения, раскрытия или уничтожения.
+            We apply modern methods of protecting personal data from unauthorized 
+            access, modification, disclosure or destruction.
           </p>
         </section>
 
         <section>
-          <h2 className="text-2xl font-semibold mb-4">5. Контакты</h2>
+          <h2 className="text-2xl font-semibold mb-4">5. Contacts</h2>
           <p>
-            По вопросам обработки персональных данных обращайтесь:
+            For questions regarding personal data processing, please contact:
           </p>
           <p>
             STRATEGA-LAM S.R.L.<br />

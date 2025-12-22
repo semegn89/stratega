@@ -28,12 +28,12 @@ type RequestWithRelations = Awaited<ReturnType<typeof getRequests>>[0]
 export const dynamic = 'force-dynamic'
 
 const statusLabels: Record<string, string> = {
-  'NEW': 'Новая',
-  'IN_PROGRESS': 'В работе',
-  'CLARIFICATION': 'Уточнение',
-  'QUOTE_SENT': 'КП отправлено',
-  'CLOSED_SUCCESS': 'Закрыта (успех)',
-  'CLOSED_FAILED': 'Закрыта (неуспех)',
+  'NEW': 'New',
+  'IN_PROGRESS': 'In Progress',
+  'CLARIFICATION': 'Clarification',
+  'QUOTE_SENT': 'Quote Sent',
+  'CLOSED_SUCCESS': 'Closed (Success)',
+  'CLOSED_FAILED': 'Closed (Failed)',
 }
 
 const statusColors: Record<string, string> = {
@@ -52,19 +52,19 @@ export default async function RequestsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-4xl font-bold mb-4">Заявки</h1>
+          <h1 className="text-4xl font-bold mb-4">Requests</h1>
           <p className="text-muted-foreground">
-            Управление заявками и запросами цен
+            Manage requests and price inquiries
           </p>
         </div>
         <Button asChild>
-          <Link href="/admin">Назад</Link>
+          <Link href="/admin">Back</Link>
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Список заявок</CardTitle>
+          <CardTitle>Requests List</CardTitle>
         </CardHeader>
         <CardContent>
           {requests.length > 0 ? (
@@ -73,13 +73,13 @@ export default async function RequestsPage() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left p-2">ID</th>
-                    <th className="text-left p-2">Тип</th>
-                    <th className="text-left p-2">Клиент</th>
-                    <th className="text-left p-2">Контакты</th>
-                    <th className="text-left p-2">Товар/Услуга</th>
-                    <th className="text-left p-2">Статус</th>
-                    <th className="text-left p-2">Дата</th>
-                    <th className="text-left p-2">Действия</th>
+                    <th className="text-left p-2">Type</th>
+                    <th className="text-left p-2">Client</th>
+                    <th className="text-left p-2">Contacts</th>
+                    <th className="text-left p-2">Product/Service</th>
+                    <th className="text-left p-2">Status</th>
+                    <th className="text-left p-2">Date</th>
+                    <th className="text-left p-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -87,7 +87,7 @@ export default async function RequestsPage() {
                     <tr key={request.id} className="border-b hover:bg-gray-50">
                       <td className="p-2 text-sm">{request.id.slice(0, 8)}...</td>
                       <td className="p-2">
-                        {request.type === 'PRODUCT_RFQ' ? 'Запрос цены' : 'Консультация'}
+                        {request.type === 'PRODUCT_RFQ' ? 'Price Request' : 'Consultation'}
                       </td>
                       <td className="p-2">
                         <div>
@@ -122,11 +122,11 @@ export default async function RequestsPage() {
                         </span>
                       </td>
                       <td className="p-2 text-sm text-muted-foreground">
-                        {new Date(request.createdAt).toLocaleDateString('ru-RU')}
+                        {new Date(request.createdAt).toLocaleDateString('en-US')}
                       </td>
                       <td className="p-2">
                         <Button asChild size="sm" variant="outline">
-                          <Link href={`/admin/requests/${request.id}`}>Открыть</Link>
+                          <Link href={`/admin/requests/${request.id}`}>Open</Link>
                         </Button>
                       </td>
                     </tr>
@@ -135,7 +135,7 @@ export default async function RequestsPage() {
               </table>
             </div>
           ) : (
-            <p className="text-muted-foreground">Заявок пока нет</p>
+            <p className="text-muted-foreground">No requests yet</p>
           )}
         </CardContent>
       </Card>

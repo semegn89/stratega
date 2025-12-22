@@ -27,24 +27,24 @@ export default async function CategoriesPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-4xl font-bold mb-4">Категории</h1>
+          <h1 className="text-4xl font-bold mb-4">Categories</h1>
           <p className="text-muted-foreground">
-            Управление категориями товаров
+            Manage product categories
           </p>
         </div>
         <div className="flex gap-2">
           <Button asChild>
-            <Link href="/admin/categories/new">Добавить категорию</Link>
+            <Link href="/admin/categories/new">Add Category</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/admin">Назад</Link>
+            <Link href="/admin">Back</Link>
           </Button>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Список категорий</CardTitle>
+          <CardTitle>Categories List</CardTitle>
         </CardHeader>
         <CardContent>
           {categories.length > 0 ? (
@@ -52,11 +52,11 @@ export default async function CategoriesPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-2">Название</th>
-                    <th className="text-left p-2">Родительская</th>
-                    <th className="text-left p-2">Товаров</th>
-                    <th className="text-left p-2">Подкатегорий</th>
-                    <th className="text-left p-2">Действия</th>
+                    <th className="text-left p-2">Name</th>
+                    <th className="text-left p-2">Parent</th>
+                    <th className="text-left p-2">Products</th>
+                    <th className="text-left p-2">Subcategories</th>
+                    <th className="text-left p-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -72,7 +72,7 @@ export default async function CategoriesPage() {
                       <td className="p-2">{category._count.children}</td>
                       <td className="p-2">
                         <Button asChild size="sm" variant="outline">
-                          <Link href={`/admin/categories/${category.id}`}>Редактировать</Link>
+                          <Link href={`/admin/categories/${category.id}`}>Edit</Link>
                         </Button>
                       </td>
                     </tr>
@@ -81,7 +81,7 @@ export default async function CategoriesPage() {
               </table>
             </div>
           ) : (
-            <p className="text-muted-foreground">Категории пока не добавлены</p>
+            <p className="text-muted-foreground">No categories added yet</p>
           )}
         </CardContent>
       </Card>

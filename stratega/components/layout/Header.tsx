@@ -18,25 +18,25 @@ export function Header() {
 
           <nav className="hidden md:flex items-center space-x-6">
             <Link href="/" className="text-sm font-medium transition-colors hover:text-primary">
-              Главная
+              Home
             </Link>
             <Link href="/catalog" className="text-sm font-medium transition-colors hover:text-primary">
-              Каталог товаров
+              Products
             </Link>
             <Link href="/services" className="text-sm font-medium transition-colors hover:text-primary">
-              Услуги
+              Services
             </Link>
             <Link href="/about" className="text-sm font-medium transition-colors hover:text-primary">
-              О компании
+              About
             </Link>
             <Link href="/contacts" className="text-sm font-medium transition-colors hover:text-primary">
-              Контакты
+              Contacts
             </Link>
           </nav>
 
           <div className="hidden md:flex items-center space-x-4">
             <Button asChild variant="outline" size="sm">
-              <Link href="/admin">Админка</Link>
+              <Link href="/admin">Admin</Link>
             </Button>
           </div>
 
@@ -54,22 +54,22 @@ export function Header() {
           <div className="md:hidden py-4 border-t">
             <nav className="flex flex-col space-y-4">
               <Link href="/" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
-                Главная
+                Home
               </Link>
               <Link href="/catalog" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
-                Каталог товаров
+                Products
               </Link>
               <Link href="/services" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
-                Услуги
+                Services
               </Link>
               <Link href="/about" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
-                О компании
+                About
               </Link>
               <Link href="/contacts" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
-                Контакты
+                Contacts
               </Link>
               <Button asChild variant="outline" size="sm">
-                <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>Админка</Link>
+                <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>Admin</Link>
               </Button>
             </nav>
           </div>

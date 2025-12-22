@@ -11,9 +11,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const requestSchema = z.object({
-  name: z.string().min(2, 'Имя должно содержать минимум 2 символа'),
-  email: z.string().email('Некорректный email'),
-  phone: z.string().min(5, 'Некорректный телефон'),
+  name: z.string().min(2, 'Name must contain at least 2 characters'),
+  email: z.string().email('Invalid email'),
+  phone: z.string().min(5, 'Invalid phone number'),
   company: z.string().optional(),
   city: z.string().optional(),
   country: z.string().optional(),
@@ -65,11 +65,11 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
       if (response.ok) {
         setSubmitSuccess(true)
       } else {
-        alert('Ошибка при отправке заявки. Попробуйте позже.')
+        alert('Error submitting request. Please try again later.')
       }
     } catch (error) {
       console.error('Error submitting request:', error)
-      alert('Ошибка при отправке заявки. Попробуйте позже.')
+      alert('Error submitting request. Please try again later.')
     } finally {
       setIsSubmitting(false)
     }
@@ -78,8 +78,8 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
   if (submitSuccess) {
     return (
       <div className="p-6 bg-green-50 border border-green-200 rounded-lg text-center">
-        <p className="text-green-800 font-semibold mb-2">Заявка успешно отправлена!</p>
-        <p className="text-sm text-green-700">Мы свяжемся с вами в ближайшее время.</p>
+        <p className="text-green-800 font-semibold mb-2">Request submitted successfully!</p>
+        <p className="text-sm text-green-700">We will contact you shortly.</p>
       </div>
     )
   }
@@ -87,11 +87,11 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
-        <Label htmlFor="name">Имя *</Label>
+        <Label htmlFor="name">Name *</Label>
         <Input
           id="name"
           {...register('name')}
-          placeholder="Ваше имя"
+          placeholder="Your name"
         />
         {errors.name && (
           <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>
@@ -112,12 +112,12 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
       </div>
 
       <div>
-        <Label htmlFor="phone">Телефон *</Label>
+        <Label htmlFor="phone">Phone *</Label>
         <Input
           id="phone"
           type="tel"
           {...register('phone')}
-          placeholder="+373 123 456 789"
+          placeholder="+40 123 456 789"
         />
         {errors.phone && (
           <p className="text-sm text-red-500 mt-1">{errors.phone.message}</p>
@@ -125,29 +125,29 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
       </div>
 
       <div>
-        <Label htmlFor="company">Компания</Label>
+        <Label htmlFor="company">Company</Label>
         <Input
           id="company"
           {...register('company')}
-          placeholder="Название компании"
+          placeholder="Company name"
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="city">Город</Label>
+          <Label htmlFor="city">City</Label>
           <Input
             id="city"
             {...register('city')}
-            placeholder="Город"
+            placeholder="City"
           />
         </div>
         <div>
-          <Label htmlFor="country">Страна</Label>
+          <Label htmlFor="country">Country</Label>
           <Input
             id="country"
             {...register('country')}
-            placeholder="Страна"
+            placeholder="Country"
           />
         </div>
       </div>
@@ -156,7 +156,7 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
         <>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="quantity">Количество</Label>
+              <Label htmlFor="quantity">Quantity</Label>
               <Input
                 id="quantity"
                 type="number"
@@ -165,17 +165,17 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
               />
             </div>
             <div>
-              <Label htmlFor="unit">Единица измерения</Label>
+              <Label htmlFor="unit">Unit</Label>
               <Input
                 id="unit"
                 {...register('unit')}
-                placeholder="шт, кг, м² и т.д."
+                placeholder="pcs, kg, m², etc."
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="deliveryDate">Желаемый срок поставки</Label>
+            <Label htmlFor="deliveryDate">Desired Delivery Date</Label>
             <Input
               id="deliveryDate"
               type="date"
@@ -187,7 +187,7 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
             <Label htmlFor="incoterms">Incoterms</Label>
             <Select onValueChange={(value) => setValue('incoterms', value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Выберите условия поставки" />
+                <SelectValue placeholder="Select delivery terms" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="EXW">EXW - Ex Works</SelectItem>
@@ -204,27 +204,27 @@ export function RequestQuoteForm({ productId, serviceId }: RequestQuoteFormProps
       )}
 
       <div>
-        <Label htmlFor="requirements">Требования / Техническое задание</Label>
+        <Label htmlFor="requirements">Requirements / Technical Specification</Label>
         <Textarea
           id="requirements"
           {...register('requirements')}
-          placeholder="Опишите ваши требования..."
+          placeholder="Describe your requirements..."
           rows={4}
         />
       </div>
 
       <div>
-        <Label htmlFor="comment">Комментарий</Label>
+        <Label htmlFor="comment">Comment</Label>
         <Textarea
           id="comment"
           {...register('comment')}
-          placeholder="Дополнительная информация..."
+          placeholder="Additional information..."
           rows={3}
         />
       </div>
 
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? 'Отправка...' : 'Отправить заявку'}
+        {isSubmitting ? 'Submitting...' : 'Submit Request'}
       </Button>
     </form>
   )

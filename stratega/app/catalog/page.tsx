@@ -46,16 +46,16 @@ export default async function CatalogPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">Каталог товаров</h1>
+        <h1 className="text-4xl font-bold mb-4">Product Catalog</h1>
         <p className="text-muted-foreground">
-          Выберите категорию или просмотрите популярные товары
+          Choose a category or browse popular products
         </p>
       </div>
 
       {/* Categories */}
       {categories.length > 0 && (
         <section className="mb-12">
-          <h2 className="text-2xl font-semibold mb-6">Категории</h2>
+          <h2 className="text-2xl font-semibold mb-6">Categories</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {categories.map((category: CategoryType) => (
               <Card key={category.id} className="hover:shadow-lg transition-shadow">
@@ -67,11 +67,11 @@ export default async function CatalogPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Товаров: {category._count.products}
+                    Products: {category._count.products}
                   </p>
                   <Button asChild>
                     <Link href={`/catalog/category/${category.slug}`}>
-                      Смотреть товары
+                      View Products
                     </Link>
                   </Button>
                 </CardContent>
@@ -83,7 +83,7 @@ export default async function CatalogPage() {
 
       {/* Products */}
       <section>
-        <h2 className="text-2xl font-semibold mb-6">Популярные товары</h2>
+        <h2 className="text-2xl font-semibold mb-6">Popular Products</h2>
         {products.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product: ProductType) => {
@@ -115,12 +115,12 @@ export default async function CatalogPage() {
                     </p>
                   ) : (
                     <p className="text-lg font-semibold text-muted-foreground mb-4">
-                      Цена по запросу
+                      Price on request
                     </p>
                   )}
                   <Button asChild className="w-full">
                     <Link href={`/catalog/product/${product.slug}`}>
-                      Подробнее
+                      Details
                     </Link>
                   </Button>
                 </CardContent>
@@ -129,7 +129,7 @@ export default async function CatalogPage() {
             })}
           </div>
         ) : (
-          <p className="text-muted-foreground">Товары пока не добавлены</p>
+          <p className="text-muted-foreground">No products added yet</p>
         )}
       </section>
     </div>

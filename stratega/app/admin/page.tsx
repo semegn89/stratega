@@ -40,9 +40,9 @@ export default async function AdminPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">Админ-панель</h1>
+        <h1 className="text-4xl font-bold mb-4">Admin Panel</h1>
         <p className="text-muted-foreground">
-          Управление контентом и заявками
+          Content and requests management
         </p>
       </div>
 
@@ -50,7 +50,7 @@ export default async function AdminPage() {
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Товары</CardTitle>
+            <CardTitle className="text-sm font-medium">Products</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -60,7 +60,7 @@ export default async function AdminPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Услуги</CardTitle>
+            <CardTitle className="text-sm font-medium">Services</CardTitle>
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -70,14 +70,14 @@ export default async function AdminPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Заявки</CardTitle>
+            <CardTitle className="text-sm font-medium">Requests</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.requestsCount}</div>
             {stats.newRequestsCount > 0 && (
               <p className="text-xs text-red-600 mt-1">
-                Новых: {stats.newRequestsCount}
+                New: {stats.newRequestsCount}
               </p>
             )}
           </CardContent>
@@ -85,7 +85,7 @@ export default async function AdminPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Категории</CardTitle>
+            <CardTitle className="text-sm font-medium">Categories</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -98,16 +98,16 @@ export default async function AdminPage() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Управление товарами</CardTitle>
-            <CardDescription>Добавление и редактирование товаров</CardDescription>
+            <CardTitle>Products Management</CardTitle>
+            <CardDescription>Add and edit products</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex gap-2">
               <Button asChild>
-                <Link href="/admin/products">Товары</Link>
+                <Link href="/admin/products">Products</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/admin/categories">Категории</Link>
+                <Link href="/admin/categories">Categories</Link>
               </Button>
             </div>
           </CardContent>
@@ -115,24 +115,24 @@ export default async function AdminPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Управление услугами</CardTitle>
-            <CardDescription>Добавление и редактирование услуг</CardDescription>
+            <CardTitle>Services Management</CardTitle>
+            <CardDescription>Add and edit services</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/admin/services">Услуги</Link>
+              <Link href="/admin/services">Services</Link>
             </Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Заявки</CardTitle>
-            <CardDescription>Обработка заявок и запросов</CardDescription>
+            <CardTitle>Requests</CardTitle>
+            <CardDescription>Process requests and inquiries</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/admin/requests">Заявки</Link>
+              <Link href="/admin/requests">Requests</Link>
             </Button>
           </CardContent>
         </Card>

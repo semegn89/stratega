@@ -4,12 +4,12 @@ import './globals.css'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 
-const inter = Inter({ subsets: ['latin', 'cyrillic'] })
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'STRATEGA-LAM S.R.L. - Торговый агент',
-  description: 'Витрина товаров и услуг. Запрос цен и коммерческих предложений.',
-  keywords: 'торговый агент, запрос цены, коммерческое предложение, товары, услуги',
+  title: 'STRATEGA-LAM S.R.L. - Trading Agent',
+  description: 'Showcase of products and services. Request prices and commercial proposals.',
+  keywords: 'trading agent, price request, commercial proposal, products, services',
 }
 
 export default function RootLayout({
@@ -18,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ru">
+    <html lang="en">
       <body className={inter.className}>
         <Header />
         <main className="min-h-screen">

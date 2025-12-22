@@ -3,39 +3,39 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 export default function GuaranteesPage() {
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-8">Гарантии и возврат</h1>
+      <h1 className="text-4xl font-bold mb-8">Guarantees & Returns</h1>
 
       <div className="prose max-w-none mb-8">
         <p className="text-lg mb-4">
-          Мы гарантируем качество товаров и услуг, предоставляемых нашими партнерами-поставщиками.
+          We guarantee the quality of products and services provided by our partner suppliers.
         </p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
         <Card>
           <CardHeader>
-            <CardTitle>Гарантии качества</CardTitle>
+            <CardTitle>Quality Guarantees</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
-              <li>• Работаем только с проверенными поставщиками</li>
-              <li>• Все товары соответствуют заявленным характеристикам</li>
-              <li>• Предоставляем необходимую документацию</li>
-              <li>• Соблюдаем сроки поставки</li>
+              <li>• Working only with verified suppliers</li>
+              <li>• All products meet stated specifications</li>
+              <li>• Providing necessary documentation</li>
+              <li>• Meeting delivery deadlines</li>
             </ul>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Возврат</CardTitle>
+            <CardTitle>Returns</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
-              <li>• Условия возврата согласовываются индивидуально</li>
-              <li>• Возможен возврат при несоответствии товара описанию</li>
-              <li>• Все вопросы решаются в рабочем порядке</li>
-              <li>• Подробности в договоре поставки</li>
+              <li>• Return conditions are agreed individually</li>
+              <li>• Returns possible if product doesn't match description</li>
+              <li>• All issues are resolved in working order</li>
+              <li>• Details in the supply contract</li>
             </ul>
           </CardContent>
         </Card>

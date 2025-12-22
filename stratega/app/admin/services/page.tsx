@@ -21,24 +21,24 @@ export default async function ServicesPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-4xl font-bold mb-4">Услуги</h1>
+          <h1 className="text-4xl font-bold mb-4">Services</h1>
           <p className="text-muted-foreground">
-            Управление услугами
+            Manage services
           </p>
         </div>
         <div className="flex gap-2">
           <Button asChild>
-            <Link href="/admin/services/new">Добавить услугу</Link>
+            <Link href="/admin/services/new">Add Service</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/admin">Назад</Link>
+            <Link href="/admin">Back</Link>
           </Button>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Список услуг</CardTitle>
+          <CardTitle>Services List</CardTitle>
         </CardHeader>
         <CardContent>
           {services.length > 0 ? (
@@ -46,10 +46,10 @@ export default async function ServicesPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-2">Название</th>
-                    <th className="text-left p-2">Категория</th>
-                    <th className="text-left p-2">Статус</th>
-                    <th className="text-left p-2">Действия</th>
+                    <th className="text-left p-2">Name</th>
+                    <th className="text-left p-2">Category</th>
+                    <th className="text-left p-2">Status</th>
+                    <th className="text-left p-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -63,12 +63,12 @@ export default async function ServicesPage() {
                       <td className="p-2">{service.category || '-'}</td>
                       <td className="p-2">
                         <span className={`px-2 py-1 rounded text-white text-xs ${service.isActive ? 'bg-green-500' : 'bg-gray-500'}`}>
-                          {service.isActive ? 'Активна' : 'Неактивна'}
+                          {service.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="p-2">
                         <Button asChild size="sm" variant="outline">
-                          <Link href={`/admin/services/${service.id}`}>Редактировать</Link>
+                          <Link href={`/admin/services/${service.id}`}>Edit</Link>
                         </Button>
                       </td>
                     </tr>
@@ -77,7 +77,7 @@ export default async function ServicesPage() {
               </table>
             </div>
           ) : (
-            <p className="text-muted-foreground">Услуги пока не добавлены</p>
+            <p className="text-muted-foreground">No services added yet</p>
           )}
         </CardContent>
       </Card>
