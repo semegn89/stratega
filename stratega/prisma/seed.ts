@@ -2,6 +2,12 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+// Helper to convert arrays to JSON strings for SQLite
+function jsonStringify(value: string[] | null | undefined): string | null {
+  if (!value || value.length === 0) return null
+  return JSON.stringify(value)
+}
+
 async function main() {
   console.log('Seeding database...')
 
