@@ -17,19 +17,19 @@ export function Header() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-2">
-            <Link href="/" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground">
+            <Link href="/" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground">
               Home
             </Link>
-            <Link href="/catalog" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground">
+            <Link href="/catalog" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground">
               Products
             </Link>
-            <Link href="/services" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground">
+            <Link href="/services" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground">
               Services
             </Link>
-            <Link href="/about" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground">
+            <Link href="/about" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground">
               About
             </Link>
-            <Link href="/contacts" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground">
+            <Link href="/contacts" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground">
               Contacts
             </Link>
           </nav>
@@ -53,19 +53,19 @@ export function Header() {
         {mobileMenuOpen && (
           <div className="md:hidden py-6 border-t border-border/50">
             <nav className="flex flex-col space-y-2">
-              <Link href="/" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                 Home
               </Link>
-              <Link href="/catalog" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/catalog" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                 Products
               </Link>
-              <Link href="/services" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/services" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                 Services
               </Link>
-              <Link href="/about" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/about" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                 About
               </Link>
-              <Link href="/contacts" className="text-sm font-semibold text-muted-foreground px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.04)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/contacts" className="text-sm font-semibold text-foreground/90 px-3 py-2.5 rounded-xl transition-all hover:bg-[rgba(17,24,39,0.06)] hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                 Contacts
               </Link>
               <Button asChild variant="ghost" size="sm" className="justify-start">

@@ -7,7 +7,7 @@ export function Footer() {
         <div className="grid md:grid-cols-4 gap-12 md:gap-8">
           <div className="space-y-4">
             <h3 className="font-medium text-base text-foreground">STRATEGA-LAM S.R.L.</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-sm text-foreground/80 leading-relaxed">
               Trading Agent. Showcase of products and services.
             </p>
           </div>
@@ -16,22 +16,22 @@ export function Footer() {
             <h4 className="font-medium text-sm text-foreground">Navigation</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <Link href="/catalog" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/catalog" className="text-foreground/80 hover:text-primary transition-colors">
                   Products
                 </Link>
               </li>
               <li>
-                <Link href="/services" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/services" className="text-foreground/80 hover:text-primary transition-colors">
                   Services
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/about" className="text-foreground/80 hover:text-primary transition-colors">
                   About
                 </Link>
               </li>
               <li>
-                <Link href="/contacts" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/contacts" className="text-foreground/80 hover:text-primary transition-colors">
                   Contacts
                 </Link>
               </li>
@@ -42,17 +42,17 @@ export function Footer() {
             <h4 className="font-medium text-sm text-foreground">Information</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <Link href="/delivery" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/delivery" className="text-foreground/80 hover:text-primary transition-colors">
                   Delivery
                 </Link>
               </li>
               <li>
-                <Link href="/guarantees" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/guarantees" className="text-foreground/80 hover:text-primary transition-colors">
                   Guarantees
                 </Link>
               </li>
               <li>
-                <Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/privacy" className="text-foreground/80 hover:text-primary transition-colors">
                   Privacy Policy
                 </Link>
               </li>
@@ -61,7 +61,7 @@ export function Footer() {
 
           <div className="space-y-4">
             <h4 className="font-medium text-sm text-foreground">Contacts</h4>
-            <div className="text-sm text-muted-foreground space-y-2 leading-relaxed">
+            <div className="text-sm text-foreground/80 space-y-2 leading-relaxed">
               <p>Jud. Vaslui, Municipiul Vaslui</p>
               <p>Strada Radu Negru, Bl. 274, Scara C, Ap. B14</p>
               <p>CUI: 52815066</p>

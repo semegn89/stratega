@@ -67,14 +67,14 @@ export default async function CatalogPage() {
       <div className="mb-16 md:mb-20 max-w-4xl">
         <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Products Catalog</h1>
         <div className="space-y-6 text-base md:text-lg text-foreground leading-relaxed">
-          <p className="text-foreground/90">
+          <p className="text-foreground">
             We operate as a trading agent and sourcing partner.
             Our product catalog is a structured showcase of goods supplied by verified manufacturers and distributors across Europe.
           </p>
           
           <div>
             <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">What we offer:</h2>
-            <ul className="space-y-2 list-disc list-inside ml-2 text-foreground/80">
+            <ul className="space-y-2 list-disc list-inside ml-2 text-foreground">
               <li>Industrial equipment and components</li>
               <li>Construction materials</li>
               <li>Consumer and commercial goods</li>
@@ -83,13 +83,13 @@ export default async function CatalogPage() {
             </ul>
           </div>
 
-          <p className="text-foreground/90">
+          <p className="text-foreground">
             All products are available on request. We do not hold stock — we source, negotiate, and deliver based on your requirements.
           </p>
 
           <div>
             <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">How it works:</h2>
-            <ol className="space-y-2 list-decimal list-inside ml-2 text-foreground/80">
+            <ol className="space-y-2 list-decimal list-inside ml-2 text-foreground">
               <li>Choose a product or category</li>
               <li>Send a price request (RFQ)</li>
               <li>We source offers from suppliers</li>

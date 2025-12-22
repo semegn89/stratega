@@ -38,13 +38,13 @@ export default async function ServicesPage() {
           <div>
             <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Our Services</h1>
             <div className="space-y-6 text-base md:text-lg text-foreground leading-relaxed">
-              <p className="text-foreground/90">
+              <p className="text-foreground">
                 STRATEGA-LAM S.R.L. provides end-to-end support for trade and supply operations.
               </p>
 
               <div>
                 <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">Core services:</h2>
-                <ul className="space-y-2 list-disc list-inside ml-2 text-foreground/80">
+                <ul className="space-y-2 list-disc list-inside ml-2 text-foreground">
                   <li>Product sourcing and supplier search</li>
                   <li>Price negotiation and offer comparison</li>
                   <li>Commercial proposal preparation</li>
@@ -56,14 +56,14 @@ export default async function ServicesPage() {
 
               <div>
                 <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">For whom:</h2>
-                <ul className="space-y-2 list-disc list-inside ml-2 text-foreground/80">
+                <ul className="space-y-2 list-disc list-inside ml-2 text-foreground">
                   <li>Businesses looking for reliable suppliers</li>
                   <li>Companies entering new markets</li>
                   <li>Clients requiring complex or non-standard sourcing</li>
                 </ul>
               </div>
 
-              <p className="text-foreground/90">
+              <p className="text-foreground">
                 We act in your interest and focus on efficiency, deadlines, and risk reduction.
               </p>
             </div>
@@ -96,12 +96,12 @@ export default async function ServicesPage() {
                 </CardHeader>
                 <CardContent>
                   {service.duration && (
-                    <p className="text-sm text-muted-foreground mb-2">
+                    <p className="text-sm text-foreground/80 mb-2">
                       Duration: {service.duration}
                     </p>
                   )}
                   {service.geography && (
-                    <p className="text-sm text-muted-foreground mb-6">
+                    <p className="text-sm text-foreground/80 mb-6">
                       Geography: {service.geography}
                     </p>
                   )}
@@ -116,7 +116,7 @@ export default async function ServicesPage() {
           })}
         </div>
       ) : (
-        <p className="text-muted-foreground text-lg">No services added yet</p>
+        <p className="text-foreground/80 text-lg">No services added yet</p>
       )}
     </div>
   )

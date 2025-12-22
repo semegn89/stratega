@@ -45,7 +45,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center mb-16">
             <h2 className="text-[32px] leading-[1.2] tracking-[-0.015em] font-semibold mb-4 text-foreground">Why Work With Us</h2>
-            <p className="text-lg text-foreground/90 leading-[1.75]">
+            <p className="text-lg text-foreground leading-[1.75]">
               Verified supplier network. Clear workflow. Fast response.
             </p>
           </div>
@@ -106,7 +106,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center space-y-6">
             <h2 className="text-[32px] leading-[1.2] tracking-[-0.015em] font-semibold text-foreground">Ready to Start Cooperation?</h2>
-            <p className="text-lg text-foreground/90 leading-[1.75]">
+            <p className="text-lg text-foreground leading-[1.75]">
               Send a price request or order a consultation right now
             </p>
             <div className="pt-2">
