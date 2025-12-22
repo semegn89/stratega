@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle2 } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default function HowWeWorkPage() {
   return (
     <div className="container mx-auto px-4 py-16 md:py-24">
