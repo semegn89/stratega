@@ -33,7 +33,7 @@ export default function GuaranteesPage() {
           <CardContent>
             <ul className="space-y-2">
               <li>• Return conditions are agreed individually</li>
-              <li>• Returns possible if product doesn't match description</li>
+              <li>• Returns possible if product doesn&apos;t match description</li>
               <li>• All issues are resolved in working order</li>
               <li>• Details in the supply contract</li>
             </ul>
