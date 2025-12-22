@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { prisma } from '@/lib/prisma'
 import { Package, Briefcase, FileText, Users } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 async function getStats() {
   const [productsCount, servicesCount, requestsCount, categoriesCount] = await Promise.all([
     prisma.product.count(),

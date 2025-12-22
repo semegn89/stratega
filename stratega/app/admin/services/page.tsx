@@ -12,6 +12,8 @@ async function getServices() {
 
 type ServiceType = Awaited<ReturnType<typeof getServices>>[0]
 
+export const dynamic = 'force-dynamic'
+
 export default async function ServicesPage() {
   const services = await getServices()
 

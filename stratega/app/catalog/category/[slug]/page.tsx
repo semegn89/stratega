@@ -27,6 +27,8 @@ type CategoryWithRelations = NonNullable<Awaited<ReturnType<typeof getCategory>>
 type CategoryChild = CategoryWithRelations['children'][0]
 type CategoryProduct = CategoryWithRelations['products'][0]
 
+export const dynamic = 'force-dynamic'
+
 export default async function CategoryPage({ params }: { params: { slug: string } }) {
   const category = await getCategory(params.slug)
 

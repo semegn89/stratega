@@ -25,6 +25,8 @@ async function getRequests() {
 
 type RequestWithRelations = Awaited<ReturnType<typeof getRequests>>[0]
 
+export const dynamic = 'force-dynamic'
+
 const statusLabels: Record<string, string> = {
   'NEW': 'Новая',
   'IN_PROGRESS': 'В работе',

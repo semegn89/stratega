@@ -15,6 +15,8 @@ async function getProducts() {
 
 type ProductWithCategory = Awaited<ReturnType<typeof getProducts>>[0]
 
+export const dynamic = 'force-dynamic'
+
 export default async function ProductsPage() {
   const products = await getProducts()
 

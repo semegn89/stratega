@@ -48,6 +48,8 @@ type ProductWithRelations = NonNullable<Awaited<ReturnType<typeof getProduct>>>
 type ProductAttribute = ProductWithRelations['attributes'][0]
 type SimilarProduct = Awaited<ReturnType<typeof getSimilarProducts>>[0]
 
+export const dynamic = 'force-dynamic'
+
 export default async function ProductPage({ params }: { params: { slug: string } }) {
   const product = await getProduct(params.slug)
 

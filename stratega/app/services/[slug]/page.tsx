@@ -10,6 +10,8 @@ async function getService(slug: string) {
   })
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function ServicePage({ params }: { params: { slug: string } }) {
   const service = await getService(params.slug)
 

@@ -35,6 +35,8 @@ async function getProducts(limit = 12) {
 type CategoryType = Awaited<ReturnType<typeof getCategories>>[0]
 type ProductType = Awaited<ReturnType<typeof getProducts>>[0]
 
+export const dynamic = 'force-dynamic'
+
 export default async function CatalogPage() {
   const [categories, products] = await Promise.all([
     getCategories(),
