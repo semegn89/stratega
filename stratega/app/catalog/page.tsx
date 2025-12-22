@@ -108,26 +108,29 @@ export default async function CatalogPage() {
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-6">Categories</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {categories.map((category: CategoryType) => (
-              <Card key={category.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle>{category.name}</CardTitle>
-                  {category.description && (
-                    <CardDescription>{category.description}</CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Products: {category._count.products}
-                  </p>
-                  <Button asChild>
-                    <Link href={`/catalog/category/${category.slug}`}>
-                      View Products
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+            {categories.map((category: CategoryType) => {
+              if (!category) return null
+              return (
+                <Card key={category.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <CardTitle>{category.name || 'Unnamed Category'}</CardTitle>
+                    {category.description && (
+                      <CardDescription>{category.description}</CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Products: {category._count?.products || 0}
+                    </p>
+                    <Button asChild>
+                      <Link href={`/catalog/category/${category.slug}`}>
+                        View Products
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         </section>
       )}
