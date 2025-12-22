@@ -37,35 +37,36 @@ export default async function ServicesPage() {
         <div className="grid lg:grid-cols-2 gap-12 items-center mb-12">
           <div>
             <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Our Services</h1>
-        <div className="space-y-6 text-base md:text-lg text-foreground leading-relaxed">
-          <p className="text-foreground/90">
-            STRATEGA-LAM S.R.L. provides end-to-end support for trade and supply operations.
-          </p>
+            <div className="space-y-6 text-base md:text-lg text-foreground leading-relaxed">
+              <p className="text-foreground/90">
+                STRATEGA-LAM S.R.L. provides end-to-end support for trade and supply operations.
+              </p>
 
-          <div>
-            <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">Core services:</h2>
-            <ul className="space-y-2 list-disc list-inside ml-2 text-foreground/80">
-              <li>Product sourcing and supplier search</li>
-              <li>Price negotiation and offer comparison</li>
-              <li>Commercial proposal preparation</li>
-              <li>Logistics coordination across Europe</li>
-              <li>Customs and documentation support</li>
-              <li>Trade consulting and market analysis</li>
-            </ul>
-          </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">Core services:</h2>
+                <ul className="space-y-2 list-disc list-inside ml-2 text-foreground/80">
+                  <li>Product sourcing and supplier search</li>
+                  <li>Price negotiation and offer comparison</li>
+                  <li>Commercial proposal preparation</li>
+                  <li>Logistics coordination across Europe</li>
+                  <li>Customs and documentation support</li>
+                  <li>Trade consulting and market analysis</li>
+                </ul>
+              </div>
 
-          <div>
-            <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">For whom:</h2>
-            <ul className="space-y-2 list-disc list-inside ml-2 text-foreground/80">
-              <li>Businesses looking for reliable suppliers</li>
-              <li>Companies entering new markets</li>
-              <li>Clients requiring complex or non-standard sourcing</li>
-            </ul>
-          </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-medium mb-4 text-foreground">For whom:</h2>
+                <ul className="space-y-2 list-disc list-inside ml-2 text-foreground/80">
+                  <li>Businesses looking for reliable suppliers</li>
+                  <li>Companies entering new markets</li>
+                  <li>Clients requiring complex or non-standard sourcing</li>
+                </ul>
+              </div>
 
-          <p className="text-foreground/90">
-            We act in your interest and focus on efficiency, deadlines, and risk reduction.
-          </p>
+              <p className="text-foreground/90">
+                We act in your interest and focus on efficiency, deadlines, and risk reduction.
+              </p>
+            </div>
           </div>
           <div className="relative h-[400px] lg:h-[500px] rounded-[18px] overflow-hidden bg-muted/30">
             <Image
