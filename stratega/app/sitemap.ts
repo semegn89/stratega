@@ -6,19 +6,30 @@ export const dynamic = 'force-dynamic'
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://stratega-lam.ro'
 
-  const [products, services, categories] = await Promise.all([
-    prisma.product.findMany({
-      where: { isActive: true },
-      select: { slug: true, updatedAt: true }
-    }),
-    prisma.service.findMany({
-      where: { isActive: true },
-      select: { slug: true, updatedAt: true }
-    }),
-    prisma.category.findMany({
-      select: { slug: true, updatedAt: true }
-    })
-  ])
+  let products: { slug: string; updatedAt: Date }[] = []
+  let services: { slug: string; updatedAt: Date }[] = []
+  let categories: { slug: string; updatedAt: Date }[] = []
+
+  try {
+    const results = await Promise.all([
+      prisma.product.findMany({
+        where: { isActive: true },
+        select: { slug: true, updatedAt: true }
+      }).catch(() => []),
+      prisma.service.findMany({
+        where: { isActive: true },
+        select: { slug: true, updatedAt: true }
+      }).catch(() => []),
+      prisma.category.findMany({
+        select: { slug: true, updatedAt: true }
+      }).catch(() => [])
+    ])
+    products = results[0] as { slug: string; updatedAt: Date }[]
+    services = results[1] as { slug: string; updatedAt: Date }[]
+    categories = results[2] as { slug: string; updatedAt: Date }[]
+  } catch (error) {
+    console.error('Error fetching sitemap data:', error)
+  }
 
   type ProductSitemap = { slug: string; updatedAt: Date }
   type ServiceSitemap = { slug: string; updatedAt: Date }

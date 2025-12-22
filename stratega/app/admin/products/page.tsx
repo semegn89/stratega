@@ -4,13 +4,18 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 async function getProducts() {
-  const products = await prisma.product.findMany({
-    include: {
-      category: true
-    },
-    orderBy: { createdAt: 'desc' }
-  })
-  return products
+  try {
+    const products = await prisma.product.findMany({
+      include: {
+        category: true
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+    return products
+  } catch (error) {
+    console.error('Error fetching products:', error)
+    return []
+  }
 }
 
 type ProductWithCategory = Awaited<ReturnType<typeof getProducts>>[0]

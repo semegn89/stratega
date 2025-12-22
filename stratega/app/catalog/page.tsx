@@ -6,30 +6,40 @@ import Image from 'next/image'
 import { parseJsonArray } from '@/lib/json-utils'
 
 async function getCategories() {
-  const categories = await prisma.category.findMany({
-    where: { parentId: null },
-    include: {
-      children: true,
-      _count: {
-        select: { products: { where: { isActive: true } } }
-      }
-    },
-    orderBy: { order: 'asc' }
-  })
-  return categories
+  try {
+    const categories = await prisma.category.findMany({
+      where: { parentId: null },
+      include: {
+        children: true,
+        _count: {
+          select: { products: { where: { isActive: true } } }
+        }
+      },
+      orderBy: { order: 'asc' }
+    })
+    return categories
+  } catch (error) {
+    console.error('Error fetching categories:', error)
+    return []
+  }
 }
 
 async function getProducts(limit = 12) {
-  const products = await prisma.product.findMany({
-    where: { isActive: true },
-    include: {
-      category: true,
-      attributes: true
-    },
-    take: limit,
-    orderBy: { createdAt: 'desc' }
-  })
-  return products
+  try {
+    const products = await prisma.product.findMany({
+      where: { isActive: true },
+      include: {
+        category: true,
+        attributes: true
+      },
+      take: limit,
+      orderBy: { createdAt: 'desc' }
+    })
+    return products
+  } catch (error) {
+    console.error('Error fetching products:', error)
+    return []
+  }
 }
 
 type CategoryType = Awaited<ReturnType<typeof getCategories>>[0]

@@ -4,10 +4,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 async function getServices() {
-  const services = await prisma.service.findMany({
-    orderBy: { createdAt: 'desc' }
-  })
-  return services
+  try {
+    const services = await prisma.service.findMany({
+      orderBy: { createdAt: 'desc' }
+    })
+    return services
+  } catch (error) {
+    console.error('Error fetching services:', error)
+    return []
+  }
 }
 
 type ServiceType = Awaited<ReturnType<typeof getServices>>[0]

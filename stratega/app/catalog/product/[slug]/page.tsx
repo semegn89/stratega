@@ -8,40 +8,55 @@ import Link from 'next/link'
 import { parseJsonArray } from '@/lib/json-utils'
 
 async function getProduct(slug: string) {
-  const product = await prisma.product.findUnique({
-    where: { slug, isActive: true },
-    include: {
-      category: {
-        include: {
-          parent: true
-        }
-      },
-      attributes: true
+  try {
+    const product = await prisma.product.findUnique({
+      where: { slug, isActive: true },
+      include: {
+        category: {
+          include: {
+            parent: true
+          }
+        },
+        attributes: true
+      }
+    })
+
+    if (!product) return null
+
+    // Increment views
+    try {
+      await prisma.product.update({
+        where: { id: product.id },
+        data: { views: { increment: 1 } }
+      })
+    } catch (error) {
+      console.error('Error incrementing views:', error)
+      // Continue even if view increment fails
     }
-  })
 
-  if (!product) return null
-
-  // Increment views
-  await prisma.product.update({
-    where: { id: product.id },
-    data: { views: { increment: 1 } }
-  })
-
-  return product
+    return product
+  } catch (error) {
+    console.error('Error fetching product:', error)
+    return null
+  }
 }
 
 async function getSimilarProducts(categoryId: string, excludeId: string, limit = 4) {
-  const products = await prisma.product.findMany({
-    where: {
-      categoryId,
-      isActive: true,
-      id: { not: excludeId }
-    },
-    take: limit,
-    orderBy: { views: 'desc' }
-  })
-  return products
+  try {
+    const products = await prisma.product.findMany({
+      where: {
+        categoryId,
+        isActive: true,
+        id: { not: excludeId }
+      },
+      take: limit,
+      orderBy: { views: 'desc' }
+    })
+    return products
+  } catch (error) {
+    console.error('Error fetching similar products:', error)
+    return []
+  }
 }
 
 type ProductWithRelations = NonNullable<Awaited<ReturnType<typeof getProduct>>>

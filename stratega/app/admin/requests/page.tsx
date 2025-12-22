@@ -5,22 +5,27 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
 async function getRequests() {
-  const requests = await prisma.request.findMany({
-    include: {
-      product: {
-        select: { name: true, slug: true }
+  try {
+    const requests = await prisma.request.findMany({
+      include: {
+        product: {
+          select: { name: true, slug: true }
+        },
+        service: {
+          select: { name: true, slug: true }
+        },
+        manager: {
+          select: { name: true, email: true }
+        }
       },
-      service: {
-        select: { name: true, slug: true }
-      },
-      manager: {
-        select: { name: true, email: true }
-      }
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 100
-  })
-  return requests
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    })
+    return requests
+  } catch (error) {
+    console.error('Error fetching requests:', error)
+    return []
+  }
 }
 
 type RequestWithRelations = Awaited<ReturnType<typeof getRequests>>[0]

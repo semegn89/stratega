@@ -8,23 +8,34 @@ import { Package, Briefcase, FileText, Users } from 'lucide-react'
 export const dynamic = 'force-dynamic'
 
 async function getStats() {
-  const [productsCount, servicesCount, requestsCount, categoriesCount] = await Promise.all([
-    prisma.product.count(),
-    prisma.service.count(),
-    prisma.request.count(),
-    prisma.category.count(),
-  ])
+  try {
+    const [productsCount, servicesCount, requestsCount, categoriesCount] = await Promise.all([
+      prisma.product.count().catch(() => 0),
+      prisma.service.count().catch(() => 0),
+      prisma.request.count().catch(() => 0),
+      prisma.category.count().catch(() => 0),
+    ])
 
-  const newRequestsCount = await prisma.request.count({
-    where: { status: 'NEW' }
-  })
+    const newRequestsCount = await prisma.request.count({
+      where: { status: 'NEW' }
+    }).catch(() => 0)
 
-  return {
-    productsCount,
-    servicesCount,
-    requestsCount,
-    categoriesCount,
-    newRequestsCount,
+    return {
+      productsCount,
+      servicesCount,
+      requestsCount,
+      categoriesCount,
+      newRequestsCount,
+    }
+  } catch (error) {
+    console.error('Error fetching stats:', error)
+    return {
+      productsCount: 0,
+      servicesCount: 0,
+      requestsCount: 0,
+      categoriesCount: 0,
+      newRequestsCount: 0,
+    }
   }
 }
 

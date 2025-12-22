@@ -5,9 +5,14 @@ import { RequestQuoteForm } from '@/components/forms/RequestQuoteForm'
 import Link from 'next/link'
 
 async function getService(slug: string) {
-  return await prisma.service.findUnique({
-    where: { slug, isActive: true }
-  })
+  try {
+    return await prisma.service.findUnique({
+      where: { slug, isActive: true }
+    })
+  } catch (error) {
+    console.error('Error fetching service:', error)
+    return null
+  }
 }
 
 export const dynamic = 'force-dynamic'

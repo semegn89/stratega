@@ -4,16 +4,21 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 async function getCategories() {
-  const categories = await prisma.category.findMany({
-    include: {
-      parent: true,
-      _count: {
-        select: { products: true, children: true }
-      }
-    },
-    orderBy: { order: 'asc' }
-  })
-  return categories
+  try {
+    const categories = await prisma.category.findMany({
+      include: {
+        parent: true,
+        _count: {
+          select: { products: true, children: true }
+        }
+      },
+      orderBy: { order: 'asc' }
+    })
+    return categories
+  } catch (error) {
+    console.error('Error fetching categories:', error)
+    return []
+  }
 }
 
 type CategoryWithRelations = Awaited<ReturnType<typeof getCategories>>[0]

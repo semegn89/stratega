@@ -7,20 +7,25 @@ import Image from 'next/image'
 import { parseJsonArray } from '@/lib/json-utils'
 
 async function getCategory(slug: string) {
-  const category = await prisma.category.findUnique({
-    where: { slug },
-    include: {
-      parent: true,
-      children: true,
-      products: {
-        where: { isActive: true },
-        include: {
-          attributes: true
+  try {
+    const category = await prisma.category.findUnique({
+      where: { slug },
+      include: {
+        parent: true,
+        children: true,
+        products: {
+          where: { isActive: true },
+          include: {
+            attributes: true
+          }
         }
       }
-    }
-  })
-  return category
+    })
+    return category
+  } catch (error) {
+    console.error('Error fetching category:', error)
+    return null
+  }
 }
 
 type CategoryWithRelations = NonNullable<Awaited<ReturnType<typeof getCategory>>>
