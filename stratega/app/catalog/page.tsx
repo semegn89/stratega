@@ -64,9 +64,22 @@ export default async function CatalogPage() {
 
   return (
     <div className="container mx-auto px-4 py-16 md:py-24">
-      <div className="mb-16 md:mb-20 max-w-4xl">
-        <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Products Catalog</h1>
-        <div className="space-y-6 text-base md:text-lg text-foreground leading-relaxed">
+      <div className="mb-16 md:mb-20">
+        <div className="grid lg:grid-cols-2 gap-12 items-center mb-12">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Products Catalog</h1>
+          </div>
+          <div className="relative h-[300px] lg:h-[400px] rounded-[18px] overflow-hidden bg-muted/30">
+            <Image
+              src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&h=600&fit=crop"
+              alt="Product catalog and warehouse"
+              fill
+              className="object-cover"
+              priority
+            />
+          </div>
+        </div>
+        <div className="max-w-4xl space-y-6 text-base md:text-lg text-foreground leading-relaxed">
           <p className="text-foreground">
             We operate as a trading agent and sourcing partner.
             Our product catalog is a structured showcase of goods supplied by verified manufacturers and distributors across Europe.
