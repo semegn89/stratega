@@ -9,7 +9,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-[rgba(252,252,253,0.75)] backdrop-blur-[12px] supports-[backdrop-filter]:bg-[rgba(252,252,253,0.75)]">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-[#FCFCFD] backdrop-blur-[12px] supports-[backdrop-filter]:bg-[#FCFCFD]">
       <div className="container mx-auto px-4">
         <div className="flex h-[72px] items-center justify-between">
           <Link href="/" className="flex items-center space-x-2 transition-opacity hover:opacity-80">

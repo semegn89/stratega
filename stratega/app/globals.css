@@ -8,17 +8,17 @@
   :root {
     /* STRATEGA-LAM UI TOKENS v1 - Clean / Airy / Modern B2B */
     
-    /* Colors */
+    /* Colors - Full opacity for visibility */
     --background: 252 252 253; /* #FCFCFD - off-white background */
     --foreground: 17 24 39; /* #111827 - graphite text */
-    --card: 255 255 255; /* #FFFFFF - cards / panels */
+    --card: 255 255 255; /* #FFFFFF - cards / panels - fully opaque */
     --card-foreground: 17 24 39; /* #111827 - graphite */
     --popover: 255 255 255;
     --popover-foreground: 17 24 39;
     --primary: 37 99 235; /* #2563EB - modern blue accent */
     --primary-hover: 29 78 216; /* #1D4ED8 - hover state */
     --primary-foreground: 255 255 255; /* White text on primary */
-    --secondary: 255 255 255; /* White */
+    --secondary: 255 255 255; /* White - fully opaque */
     --secondary-foreground: 17 24 39;
     --muted: 107 114 128; /* #6B7280 - secondary text */
     --muted-foreground: 107 114 128;
@@ -27,7 +27,7 @@
     --destructive: 220 38 38; /* #DC2626 */
     --destructive-foreground: 255 255 255;
     --border: 229 231 235; /* #E5E7EB - subtle borders */
-    --input: 255 255 255;
+    --input: 255 255 255; /* White - fully opaque */
     --ring: 37 99 235;
     --radius: 0.875rem; /* 14px */
     
