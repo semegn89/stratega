@@ -6,16 +6,16 @@ export default function ContactsPage() {
   return (
     <div className="container mx-auto px-4 py-16 md:py-24">
       <div className="mb-16 md:mb-20">
-        <div className="grid lg:grid-cols-2 gap-12 items-center mb-12">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Contacts</h1>
-            <p className="text-lg md:text-xl text-foreground leading-relaxed">
-              Ready to start cooperation or request a price?
-            </p>
-          </div>
-          <div className="relative h-[300px] lg:h-[400px] rounded-[18px] overflow-hidden bg-muted/30">
+        <div className="max-w-4xl mx-auto mb-12">
+          <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-foreground">Contacts</h1>
+          <p className="text-lg md:text-xl text-foreground leading-relaxed">
+            Ready to start cooperation or request a price?
+          </p>
+        </div>
+        <div className="mb-12">
+          <div className="relative w-full h-[400px] lg:h-[500px] rounded-[18px] overflow-hidden bg-muted/30">
             <Image
-              src="https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&h=600&fit=crop"
+              src="https://images.unsplash.com/photo-1551434678-e076c223a692?w=1200&h=600&fit=crop"
               alt="Business communication and contact"
               fill
               className="object-cover"

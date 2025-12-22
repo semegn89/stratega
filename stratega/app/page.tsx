@@ -43,16 +43,16 @@ export default function HomePage() {
       {/* Features Section - Airy, Clean */}
       <section className="section bg-[#F9FAFB]">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
-            <div>
-              <h2 className="text-[32px] leading-[1.2] tracking-[-0.015em] font-semibold mb-4 text-foreground">Why Work With Us</h2>
-              <p className="text-lg text-foreground leading-[1.75]">
-                Verified supplier network. Clear workflow. Fast response.
-              </p>
-            </div>
-            <div className="relative h-[300px] lg:h-[400px] rounded-[18px] overflow-hidden bg-muted/30">
+          <div className="max-w-4xl mx-auto text-center mb-16">
+            <h2 className="text-[32px] leading-[1.2] tracking-[-0.015em] font-semibold mb-4 text-foreground">Why Work With Us</h2>
+            <p className="text-lg text-foreground leading-[1.75]">
+              Verified supplier network. Clear workflow. Fast response.
+            </p>
+          </div>
+          <div className="mb-16">
+            <div className="relative w-full h-[400px] lg:h-[500px] rounded-[18px] overflow-hidden bg-muted/30">
               <Image
-                src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&h=600&fit=crop"
+                src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=1200&h=600&fit=crop"
                 alt="Professional business partnership"
                 fill
                 className="object-cover"
@@ -114,26 +114,24 @@ export default function HomePage() {
       {/* CTA Section - Minimal */}
       <section className="section bg-background">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
-            <div className="relative h-[300px] lg:h-[400px] rounded-[18px] overflow-hidden bg-muted/30 order-2 lg:order-1">
-              <Image
-                src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=600&fit=crop"
-                alt="Business collaboration and partnership"
-                fill
-                className="object-cover"
-              />
+          <div className="max-w-2xl mx-auto text-center space-y-6 mb-12">
+            <h2 className="text-[32px] leading-[1.2] tracking-[-0.015em] font-semibold text-foreground">Ready to Start Cooperation?</h2>
+            <p className="text-lg text-foreground leading-[1.75]">
+              Send a price request or order a consultation right now
+            </p>
+            <div className="pt-2">
+              <Button asChild size="lg">
+                <Link href="/catalog">View Catalog</Link>
+              </Button>
             </div>
-            <div className="space-y-6 text-center lg:text-left order-1 lg:order-2">
-              <h2 className="text-[32px] leading-[1.2] tracking-[-0.015em] font-semibold text-foreground">Ready to Start Cooperation?</h2>
-              <p className="text-lg text-foreground leading-[1.75]">
-                Send a price request or order a consultation right now
-              </p>
-              <div className="pt-2">
-                <Button asChild size="lg">
-                  <Link href="/catalog">View Catalog</Link>
-                </Button>
-              </div>
-            </div>
+          </div>
+          <div className="relative w-full h-[400px] lg:h-[500px] rounded-[18px] overflow-hidden bg-muted/30">
+            <Image
+              src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&h=600&fit=crop"
+              alt="Business collaboration and partnership"
+              fill
+              className="object-cover"
+            />
           </div>
         </div>
       </section>
