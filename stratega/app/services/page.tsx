@@ -20,11 +20,38 @@ export default async function ServicesPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">Services</h1>
-        <p className="text-muted-foreground">
-          Professional services for your business
-        </p>
+      <div className="mb-12">
+        <h1 className="text-4xl font-bold mb-4">Our Services</h1>
+        <div className="prose max-w-none mb-8">
+          <p className="text-lg mb-4">
+            STRATEGA-LAM S.R.L. provides end-to-end support for trade and supply operations.
+          </p>
+
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold mb-4">Core services:</h2>
+            <ul className="space-y-2 list-disc list-inside">
+              <li>Product sourcing and supplier search</li>
+              <li>Price negotiation and offer comparison</li>
+              <li>Commercial proposal preparation</li>
+              <li>Logistics coordination across Europe</li>
+              <li>Customs and documentation support</li>
+              <li>Trade consulting and market analysis</li>
+            </ul>
+          </div>
+
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold mb-4">For whom:</h2>
+            <ul className="space-y-2 list-disc list-inside">
+              <li>Businesses looking for reliable suppliers</li>
+              <li>Companies entering new markets</li>
+              <li>Clients requiring complex or non-standard sourcing</li>
+            </ul>
+          </div>
+
+          <p className="mb-6">
+            We act in your interest and focus on efficiency, deadlines, and risk reduction.
+          </p>
+        </div>
       </div>
 
       {services.length > 0 ? (

@@ -6,35 +6,44 @@ export default function ContactsPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold mb-8">Contacts</h1>
 
+      <div className="prose max-w-none mb-8">
+        <p className="text-lg mb-6">
+          Ready to start cooperation or request a price?
+        </p>
+      </div>
+
       <div className="grid lg:grid-cols-2 gap-8">
         <div>
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
+              <CardTitle>Office address:</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Address</h3>
-                  <p className="text-muted-foreground">
-                    Jud. Vaslui, Municipiul Vaslui<br />
-                    Strada Radu Negru, Bl. 274, Scara C, Ap. B14
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Company Details</h3>
-                  <p className="text-muted-foreground">
-                    CUI: 52815066<br />
-                    EUID: ROONRC.J2025083844000
-                  </p>
-                </div>
-              </div>
+              <p className="text-muted-foreground">
+                Jud. Vaslui, Municipiul Vaslui<br />
+                Strada Radu Negru, Bl. 274, Scara C, Ap. B14
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>How to contact us:</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 list-disc list-inside">
+                <li>Use the request form on the website</li>
+                <li>Send a price request or consultation inquiry</li>
+              </ul>
+              <p className="mt-4 font-semibold">
+                We respond within one business day.
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Contact Form</CardTitle>
+              <CardTitle>Send Request</CardTitle>
             </CardHeader>
             <CardContent>
               <RequestQuoteForm />
@@ -45,20 +54,14 @@ export default function ContactsPage() {
         <div>
           <Card>
             <CardHeader>
-              <CardTitle>How to Contact Us</CardTitle>
+              <CardTitle>Company Information</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="mb-4">
-                To get a commercial proposal or consultation, fill out the contact 
-                form, and our manager will contact you within 24 hours.
-              </p>
-              <p className="mb-4">
-                You can also send a price request directly from the product or service card.
-              </p>
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-900">
-                  <strong>Working Hours:</strong> Mon-Fri, 9:00 - 18:00 (EET)
-                </p>
+              <div className="space-y-2 text-sm">
+                <p><strong>STRATEGA-LAM S.R.L.</strong></p>
+                <p><strong>CUI:</strong> 52815066</p>
+                <p><strong>EUID:</strong> ROONRC.J2025083844000</p>
+                <p><strong>Registered in Romania</strong></p>
               </div>
             </CardContent>
           </Card>

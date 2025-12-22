@@ -45,11 +45,43 @@ export default async function CatalogPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">Product Catalog</h1>
-        <p className="text-muted-foreground">
-          Choose a category or browse popular products
-        </p>
+      <div className="mb-12">
+        <h1 className="text-4xl font-bold mb-4">Products Catalog</h1>
+        <div className="prose max-w-none mb-6">
+          <p className="text-lg mb-4">
+            We operate as a trading agent and sourcing partner.
+            Our product catalog is a structured showcase of goods supplied by verified manufacturers and distributors across Europe.
+          </p>
+          
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold mb-4">What we offer:</h2>
+            <ul className="space-y-2 list-disc list-inside">
+              <li>Industrial equipment and components</li>
+              <li>Construction materials</li>
+              <li>Consumer and commercial goods</li>
+              <li>Custom and made-to-order products</li>
+              <li>Bulk and wholesale supplies</li>
+            </ul>
+          </div>
+
+          <p className="mb-6">
+            All products are available on request. We do not hold stock — we source, negotiate, and deliver based on your requirements.
+          </p>
+
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold mb-4">How it works:</h2>
+            <ol className="space-y-2 list-decimal list-inside">
+              <li>Choose a product or category</li>
+              <li>Send a price request (RFQ)</li>
+              <li>We source offers from suppliers</li>
+              <li>You receive a commercial proposal</li>
+            </ol>
+          </div>
+
+          <p className="mb-6 font-semibold">
+            Fast response. Transparent terms. No hidden margins.
+          </p>
+        </div>
       </div>
 
       {/* Categories */}
