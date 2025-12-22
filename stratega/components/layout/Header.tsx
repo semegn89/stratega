@@ -11,7 +11,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-[rgba(252,252,253,0.75)] backdrop-blur-[12px] supports-[backdrop-filter]:bg-[rgba(252,252,253,0.75)]">
       <div className="container mx-auto px-4">
-        <div className="flex h-18 items-center justify-between">
+        <div className="flex h-[72px] items-center justify-between">
           <Link href="/" className="flex items-center space-x-2 transition-opacity hover:opacity-80">
             <span className="text-lg font-semibold text-foreground tracking-tight">STRATEGA-LAM</span>
           </Link>
