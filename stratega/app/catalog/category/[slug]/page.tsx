@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
+import { parseJsonArray } from '@/lib/json-utils'
 
 async function getCategory(slug: string) {
   const category = await prisma.category.findUnique({
@@ -90,12 +91,14 @@ export default async function CategoryPage({ params }: { params: { slug: string 
         <h2 className="text-2xl font-semibold mb-6">Товары</h2>
         {category.products && category.products.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {category.products.map((product: CategoryProduct) => (
+            {category.products.map((product: CategoryProduct) => {
+              const images = parseJsonArray<string>(product.images)
+              return (
               <Card key={product.id} className="hover:shadow-lg transition-shadow">
-                {product.images && product.images.length > 0 && (
+                {images.length > 0 && (
                   <div className="relative h-48 w-full bg-gray-100 rounded-t-lg overflow-hidden">
                     <Image
-                      src={product.images[0]}
+                      src={images[0]}
                       alt={product.name}
                       fill
                       className="object-cover"
@@ -127,7 +130,8 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                   </Button>
                 </CardContent>
               </Card>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <p className="text-muted-foreground">В этой категории пока нет товаров</p>

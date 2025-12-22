@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { RequestQuoteForm } from '@/components/forms/RequestQuoteForm'
 import Link from 'next/link'
+import { parseJsonArray } from '@/lib/json-utils'
 
 async function getProduct(slug: string) {
   const product = await prisma.product.findUnique({
@@ -82,20 +83,23 @@ export default async function ProductPage({ params }: { params: { slug: string }
       <div className="grid lg:grid-cols-2 gap-8 mb-12">
         {/* Images */}
         <div>
-          {product.images && product.images.length > 0 ? (
-            <div className="relative h-96 w-full bg-gray-100 rounded-lg overflow-hidden mb-4">
-              <Image
-                src={product.images[0]}
-                alt={product.name}
-                fill
-                className="object-cover"
-              />
-            </div>
-          ) : (
-            <div className="h-96 w-full bg-gray-100 rounded-lg flex items-center justify-center">
-              <span className="text-muted-foreground">Нет изображения</span>
-            </div>
-          )}
+          {(() => {
+            const images = parseJsonArray<string>(product.images)
+            return images.length > 0 ? (
+              <div className="relative h-96 w-full bg-gray-100 rounded-lg overflow-hidden mb-4">
+                <Image
+                  src={images[0]}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="h-96 w-full bg-gray-100 rounded-lg flex items-center justify-center">
+                <span className="text-muted-foreground">Нет изображения</span>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Product Info */}
@@ -184,12 +188,14 @@ export default async function ProductPage({ params }: { params: { slug: string }
         <section>
           <h2 className="text-2xl font-semibold mb-6">Похожие товары</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {similarProducts.map((similar: SimilarProduct) => (
+            {similarProducts.map((similar: SimilarProduct) => {
+              const similarImages = parseJsonArray<string>(similar.images)
+              return (
               <Card key={similar.id} className="hover:shadow-lg transition-shadow">
-                {similar.images && similar.images.length > 0 && (
+                {similarImages.length > 0 && (
                   <div className="relative h-48 w-full bg-gray-100 rounded-t-lg overflow-hidden">
                     <Image
-                      src={similar.images[0]}
+                      src={similarImages[0]}
                       alt={similar.name}
                       fill
                       className="object-cover"
@@ -207,7 +213,8 @@ export default async function ProductPage({ params }: { params: { slug: string }
                   </Button>
                 </CardContent>
               </Card>
-            ))}
+              )
+            })}
           </div>
         </section>
       )}

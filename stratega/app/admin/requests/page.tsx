@@ -26,21 +26,21 @@ async function getRequests() {
 type RequestWithRelations = Awaited<ReturnType<typeof getRequests>>[0]
 
 const statusLabels: Record<string, string> = {
-  NEW: 'Новая',
-  IN_PROGRESS: 'В работе',
-  CLARIFICATION: 'Уточнение',
-  QUOTE_SENT: 'КП отправлено',
-  CLOSED_SUCCESS: 'Закрыта (успех)',
-  CLOSED_FAILED: 'Закрыта (неуспех)',
+  'NEW': 'Новая',
+  'IN_PROGRESS': 'В работе',
+  'CLARIFICATION': 'Уточнение',
+  'QUOTE_SENT': 'КП отправлено',
+  'CLOSED_SUCCESS': 'Закрыта (успех)',
+  'CLOSED_FAILED': 'Закрыта (неуспех)',
 }
 
 const statusColors: Record<string, string> = {
-  NEW: 'bg-blue-500',
-  IN_PROGRESS: 'bg-yellow-500',
-  CLARIFICATION: 'bg-orange-500',
-  QUOTE_SENT: 'bg-green-500',
-  CLOSED_SUCCESS: 'bg-green-700',
-  CLOSED_FAILED: 'bg-red-500',
+  'NEW': 'bg-blue-500',
+  'IN_PROGRESS': 'bg-yellow-500',
+  'CLARIFICATION': 'bg-orange-500',
+  'QUOTE_SENT': 'bg-green-500',
+  'CLOSED_SUCCESS': 'bg-green-700',
+  'CLOSED_FAILED': 'bg-red-500',
 }
 
 export default async function RequestsPage() {

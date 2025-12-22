@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
+import { parseJsonArray } from '@/lib/json-utils'
 
 async function getCategories() {
   const categories = await prisma.category.findMany({
@@ -83,12 +84,14 @@ export default async function CatalogPage() {
         <h2 className="text-2xl font-semibold mb-6">Популярные товары</h2>
         {products.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product: ProductType) => (
+            {products.map((product: ProductType) => {
+              const images = parseJsonArray<string>(product.images)
+              return (
               <Card key={product.id} className="hover:shadow-lg transition-shadow">
-                {product.images && product.images.length > 0 && (
+                {images.length > 0 && (
                   <div className="relative h-48 w-full bg-gray-100 rounded-t-lg overflow-hidden">
                     <Image
-                      src={product.images[0]}
+                      src={images[0]}
                       alt={product.name}
                       fill
                       className="object-cover"
@@ -120,7 +123,8 @@ export default async function CatalogPage() {
                   </Button>
                 </CardContent>
               </Card>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <p className="text-muted-foreground">Товары пока не добавлены</p>
