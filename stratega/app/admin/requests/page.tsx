@@ -3,24 +3,9 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Prisma } from '@prisma/client'
 
-type RequestWithRelations = Prisma.RequestGetPayload<{
-  include: {
-    product: {
-      select: { name: true, slug: true }
-    }
-    service: {
-      select: { name: true, slug: true }
-    }
-    manager: {
-      select: { name: true, email: true }
-    }
-  }
-}>
-
-async function getRequests(): Promise<RequestWithRelations[]> {
-  return await prisma.request.findMany({
+async function getRequests() {
+  const requests = await prisma.request.findMany({
     include: {
       product: {
         select: { name: true, slug: true }
@@ -35,7 +20,10 @@ async function getRequests(): Promise<RequestWithRelations[]> {
     orderBy: { createdAt: 'desc' },
     take: 100
   })
+  return requests
 }
+
+type RequestWithRelations = Awaited<ReturnType<typeof getRequests>>[0]
 
 const statusLabels: Record<string, string> = {
   NEW: 'Новая',

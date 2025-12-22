@@ -2,19 +2,9 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Prisma } from '@prisma/client'
 
-type CategoryWithRelations = Prisma.CategoryGetPayload<{
-  include: {
-    parent: true
-    _count: {
-      select: { products: true, children: true }
-    }
-  }
-}>
-
-async function getCategories(): Promise<CategoryWithRelations[]> {
-  return await prisma.category.findMany({
+async function getCategories() {
+  const categories = await prisma.category.findMany({
     include: {
       parent: true,
       _count: {
@@ -23,7 +13,10 @@ async function getCategories(): Promise<CategoryWithRelations[]> {
     },
     orderBy: { order: 'asc' }
   })
+  return categories
 }
+
+type CategoryWithRelations = Awaited<ReturnType<typeof getCategories>>[0]
 
 export default async function CategoriesPage() {
   const categories = await getCategories()
