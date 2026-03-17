@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "packages": {
+    "python": "3.11"
+  },
+  "buildAptPackages": ["gcc", "pkg-config", "rustc", "cargo", "libssl-dev"],
+  "steps": {
+    "install": {
+      "commands": [
+        "python -V",
+        "python -m venv /app/.venv",
+        "/app/.venv/bin/python -m pip install --upgrade pip setuptools wheel",
+        "/app/.venv/bin/pip install -vvv --no-cache-dir -r requirements.txt"
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "python -u bot.py"
+  }
+}
+
