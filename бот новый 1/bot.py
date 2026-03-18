@@ -269,26 +269,42 @@ def _quantize_size(size: float, decimals: int = 0) -> float:
     return _floor_to_decimals(float(size), decimals)
 
 
+def _outcome_balance_decimals() -> int:
+    """Decimals for outcome token balance (API may return base units). Override via OUTCOME_BALANCE_DECIMALS."""
+    return _safe_int(os.getenv("OUTCOME_BALANCE_DECIMALS"), 6)
+
+
 def _parse_outcome_balance(result) -> float:
-    """Parse outcome token balance from get_balance_allowance(CONDITIONAL). Returns size in human units."""
+    """Parse outcome token balance from get_balance_allowance(CONDITIONAL). Returns size in human units.
+    Raw payload may be in base units; we normalize using OUTCOME_BALANCE_DECIMALS (default 6).
+    """
     raw = 0.0
+    raw_key = None
     if isinstance(result, dict):
         for k in ["balance", "Balance", "size", "amount"]:
             if k in result and result[k] is not None:
                 try:
                     raw = float(result[k])
+                    raw_key = k
                     break
                 except (TypeError, ValueError):
                     pass
     elif isinstance(result, (tuple, list)) and len(result) >= 1 and result[0] is not None:
         raw = float(result[0])
+        raw_key = "result[0]"
     elif isinstance(result, (int, float)):
         raw = float(result)
-    if raw >= 1e10:
-        return raw / 1e6
-    if raw >= 1e6:
-        return raw / 1e6
-    return raw
+        raw_key = "value"
+    decimals = _outcome_balance_decimals()
+    divisor = 10 ** decimals if decimals >= 0 else 1e6
+    # Always normalize: API often returns base units (e.g. 41721, 875000) -> human (4.17, 0.875 with 6 decimals)
+    normalized = raw / divisor if raw and divisor != 1 else raw
+    if raw_key is not None and (raw >= 1e4 or raw != normalized):
+        logging.debug(
+            "[RECONCILE_RAW] raw_actual=%s key=%s decimals_used=%s normalized_actual=%.6f",
+            raw, raw_key, decimals, normalized,
+        )
+    return normalized
 
 
 def _min_order_size() -> float:
@@ -731,6 +747,7 @@ def make_clob_client():
     funder = os.getenv("POLY_FUNDER")
     if funder:
         kwargs["funder"] = funder.strip()
+        print("BOOT: POLY_FUNDER set — balance and orders use this Polymarket wallet (not MetaMask)", flush=True)
     sig_type = os.getenv("POLY_SIGNATURE_TYPE")
     if sig_type is not None:
         kwargs["signature_type"] = int(sig_type)
@@ -1004,6 +1021,14 @@ class Risk:
         self._allow_warned = False
         self._balance_at_ambiguous: Optional[float] = None  # for orphan detection after ambiguous submit
         self._ambiguous_balance_check_ts = 0.0  # last time we polled balance during ambiguous cooldown (early clear)
+        self._ambiguous_expected_side: Optional[str] = None
+        self._ambiguous_expected_token_id: Optional[str] = None
+        self._ambiguous_expected_size: float = 0.0
+        self._ambiguous_expected_notional: float = 0.0
+        self._ambiguous_reconcile_poll_count: int = 0
+        self._last_ambiguous_reconcile_ts: float = 0.0
+        self._balance_mismatch_warned = False  # log once per session when balance looks low
+        self._invalid_signature_hint_logged = False  # log once when post_order returns invalid signature
         self.balance_blocked_until = 0.0
         self.last_balance_warn_ts = 0.0
         self.balance_low_cooldown_sec = _safe_float(os.getenv("BALANCE_LOW_COOLDOWN_SEC"), 20.0)
@@ -1035,12 +1060,206 @@ class Risk:
         self.exit_blocked_reason = ""
         self.exit_blocked_ts = 0.0
         self.exit_blocked_size = 0.0
+        self.exit_attempts_count = 0
+        self.exit_last_progress_ts = 0.0
+        self.exit_mode = "NORMAL"
+        self.exit_last_fail_reason = ""
+        self.exit_stuck_timeout_sec = _safe_float(os.getenv("EXIT_STUCK_TIMEOUT_SEC"), 60.0)
+        self.exit_wait_settle_start_ts = 0.0  # when we entered WAIT_SETTLE (for timeout -> terminal)
+        self.exit_terminal_reason: Optional[str] = None  # set when exit_in_slices goes dust_tail/manual_residue
+        # entry anti-spam: no-liq backoff by (slug, side)
+        self._last_no_liq_ts_by_key: dict = {}  # key "slug|side" -> ts
+        self._consecutive_no_liq_by_key: dict = {}  # key -> int
+        self._last_entry_submit_ts_by_key: dict = {}  # key "slug|side" -> ts (rate limit)
+        self._last_entry_fingerprint: Optional[str] = None
+        self._last_failed_entry_fingerprint: Optional[str] = None
+        self._last_failed_entry_reason: Optional[str] = None
         # ссылка на PositionManager выставляется из run_bot
         self.posm: Optional[PositionManager] = None
+
+    def _entry_key(self, slug: str, side: str) -> str:
+        return f"{slug}|{side}"
+
+    def record_entry_no_liquidity(self, slug: str, side: str) -> float:
+        """Record no-liquidity for (slug, side); return backoff seconds (3 -> 6 -> 10)."""
+        key = self._entry_key(slug, side)
+        now = now_s()
+        self._last_no_liq_ts_by_key[key] = now
+        n = self._consecutive_no_liq_by_key.get(key, 0) + 1
+        self._consecutive_no_liq_by_key[key] = n
+        backoff = 3.0 if n <= 1 else (6.0 if n == 2 else 10.0)
+        logging.info("[ENTRY_BACKOFF] slug=%s side=%s seconds=%.0f reason=no_liq consecutive=%s", slug[:24] if len(slug) > 24 else slug, side, backoff, n)
+        return backoff
+
+    def entry_backoff_remaining(self, slug: str, side: str) -> float:
+        """Seconds remaining in backoff for (slug, side); 0 if none."""
+        key = self._entry_key(slug, side)
+        last_ts = self._last_no_liq_ts_by_key.get(key, 0)
+        if last_ts <= 0:
+            return 0.0
+        n = self._consecutive_no_liq_by_key.get(key, 0)
+        backoff_sec = 3.0 if n <= 1 else (6.0 if n == 2 else 10.0)
+        return max(0.0, last_ts + backoff_sec - now_s())
+
+    def clear_entry_backoff_on_success(self, slug: str, side: str) -> None:
+        key = self._entry_key(slug, side)
+        self._consecutive_no_liq_by_key[key] = 0
+        self._last_no_liq_ts_by_key.pop(key, None)
+
+    def clear_entry_backoff_on_new_slug(self, new_slug: str) -> None:
+        """Remove backoff entries for other slugs (keep only keys for new_slug)."""
+        to_del = [k for k in self._last_no_liq_ts_by_key if not k.startswith(new_slug + "|")]
+        for k in to_del:
+            self._last_no_liq_ts_by_key.pop(k, None)
+            self._consecutive_no_liq_by_key.pop(k, None)
+
+    def entry_rate_limit_remaining(self, slug: str, side: str, min_interval_sec: float) -> float:
+        """Seconds to wait before next submit allowed; 0 if none."""
+        key = self._entry_key(slug, side)
+        last = self._last_entry_submit_ts_by_key.get(key, 0)
+        if last <= 0:
+            return 0.0
+        return max(0.0, last + min_interval_sec - now_s())
+
+    def record_entry_submit_ts(self, slug: str, side: str) -> None:
+        key = self._entry_key(slug, side)
+        self._last_entry_submit_ts_by_key[key] = now_s()
+
+    def set_failed_entry_fingerprint(self, fp: str, reason: str) -> None:
+        self._last_failed_entry_fingerprint = fp
+        self._last_failed_entry_reason = reason
+
+    def clear_failed_entry_fingerprint(self) -> None:
+        self._last_failed_entry_fingerprint = None
+        self._last_failed_entry_reason = None
 
     def invalidate_balance_cache(self) -> None:
         """Force next can_trade/refresh_balance to fetch fresh balance (call after any order submit/fill)."""
         self._last_check = 0.0
+
+    def set_ambiguous_context(self, side: str, token_id: str, size: float, notional: float) -> None:
+        """Set expected order context before submit; used by reconcile_after_ambiguous_submit."""
+        self._ambiguous_expected_side = side
+        self._ambiguous_expected_token_id = token_id
+        self._ambiguous_expected_size = float(size)
+        self._ambiguous_expected_notional = float(notional)
+
+    def clear_ambiguous_context(self) -> None:
+        """Clear expected order context (call with posm.clear_ambiguous)."""
+        self._ambiguous_expected_side = None
+        self._ambiguous_expected_token_id = None
+        self._ambiguous_expected_size = 0.0
+        self._ambiguous_expected_notional = 0.0
+        self._ambiguous_reconcile_poll_count = 0
+        self._last_ambiguous_reconcile_ts = 0.0
+
+    async def fetch_outcome_balance_for_reconcile(self, token_id: str) -> Optional[float]:
+        """Fetch outcome token balance for ambiguous reconcile. Returns None on error."""
+        try:
+            cond_type = getattr(AssetType, "CONDITIONAL", None)
+            if cond_type is None:
+                return None
+            try:
+                params = BalanceAllowanceParams(asset_type=cond_type, token_id=token_id)
+            except TypeError:
+                params = BalanceAllowanceParams(asset_type=cond_type, token_ID=token_id)
+            result = await _call_with_retry(
+                self.client.get_balance_allowance, params, tag="get_balance_allowance_conditional"
+            )
+            return _parse_outcome_balance(result)
+        except Exception as e:
+            logging.debug(f"[AMB_RECON] fetch outcome balance failed: {e}")
+            return None
+
+    async def reconcile_after_ambiguous_submit(self) -> str:
+        """Run one reconciliation step: open orders + inventory + balance delta. Returns verdict: unblock, keep, sync."""
+        token_id = self._ambiguous_expected_token_id
+        side = self._ambiguous_expected_side
+        expected_size = self._ambiguous_expected_size
+        expected_notional = self._ambiguous_expected_notional
+        local_sz = getattr(self.posm, "size", 0.0) or 0.0 if self.posm else 0.0
+        if not token_id:
+            return "unblock"
+        open_orders_sell_sz = 0.0
+        try:
+            get_open = getattr(self.client, "get_open_orders", None)
+            if get_open:
+                orders = await asyncio.to_thread(get_open)
+                for o in (orders if isinstance(orders, list) else []):
+                    o_token = (o.get("asset_id") or o.get("tokenID") or o.get("token_id") or "") if isinstance(o, dict) else ""
+                    o_side = (o.get("side") or "").upper() if isinstance(o, dict) else ""
+                    o_sz = float(o.get("size") or o.get("original_size") or 0) if isinstance(o, dict) else 0
+                    if str(o_token) == str(token_id) and "SELL" in o_side and o_sz > 0:
+                        open_orders_sell_sz += o_sz
+        except Exception as e:
+            logging.debug(f"[AMB_RECON] get_open_orders failed: {e}")
+        actual = await self.fetch_outcome_balance_for_reconcile(token_id)
+        bal, _ = await self.refresh_balance()
+        balance_delta = (bal - self._balance_at_ambiguous) if self._balance_at_ambiguous is not None else 0.0
+        self._last_ambiguous_reconcile_ts = now_s()
+        self._ambiguous_reconcile_poll_count += 1
+        verdict = "keep"
+        if actual is None:
+            logging.info("[AMB_RECON] actual=unknown local=%.4f open_orders=%.4f balance_delta=%.2f verdict=keep", local_sz, open_orders_sell_sz, balance_delta)
+            return "keep"
+        if open_orders_sell_sz > 0:
+            logging.info("[AMB_RECON] actual=%.4f local=%.4f open_orders=%.4f balance_delta=%.2f verdict=keep", actual, local_sz, open_orders_sell_sz, balance_delta)
+            return "keep"
+        if side == BUY_SIDE or (side and "BUY" in str(side).upper()):
+            if actual >= expected_size * 0.99:
+                verdict = "sync"
+                if self.posm:
+                    self.posm.open(token_id, actual, expected_notional / expected_size if expected_size > 0 else 0.5, entry_type="simple_mom")
+                self._balance_at_ambiguous = None
+                self.posm.clear_ambiguous()
+                self.clear_ambiguous_context()
+                logging.info("[AMB_RECON] actual=%.4f local=%.4f open_orders=%.4f balance_delta=%.2f verdict=sync filled", actual, local_sz, open_orders_sell_sz, balance_delta)
+                return "sync"
+            if actual <= 0.01:
+                verdict = "unblock"
+                self._balance_at_ambiguous = None
+                self.posm.clear_ambiguous()
+                self.clear_ambiguous_context()
+                logging.info("[AMB_RECON] actual=%.4f local=%.4f open_orders=%.4f balance_delta=%.2f verdict=unblock likely_failed", actual, local_sz, open_orders_sell_sz, balance_delta)
+                return "unblock"
+            verdict = "sync"
+            if self.posm:
+                self.posm.open(token_id, actual, expected_notional / expected_size if expected_size > 0 else 0.5, entry_type="simple_mom")
+            self._balance_at_ambiguous = None
+            self.posm.clear_ambiguous()
+            self.clear_ambiguous_context()
+            logging.info("[AMB_RECON] actual=%.4f local=%.4f open_orders=%.4f balance_delta=%.2f verdict=sync partial", actual, local_sz, open_orders_sell_sz, balance_delta)
+            return "sync"
+        if side == SELL_SIDE or (side and "SELL" in str(side).upper()):
+            if actual <= 0.01:
+                verdict = "unblock"
+                self._balance_at_ambiguous = None
+                if self.posm:
+                    self.posm.clear()
+                self.posm.clear_ambiguous()
+                self.clear_ambiguous_context()
+                logging.info("[AMB_RECON] actual=%.4f local=%.4f open_orders=%.4f balance_delta=%.2f verdict=unblock sold", actual, local_sz, open_orders_sell_sz, balance_delta)
+                return "unblock"
+            if actual < local_sz - 0.01:
+                verdict = "sync"
+                if self.posm:
+                    self.posm.size = actual
+                self._balance_at_ambiguous = None
+                self.posm.clear_ambiguous()
+                self.clear_ambiguous_context()
+                logging.info("[AMB_RECON] actual=%.4f local=%.4f open_orders=%.4f balance_delta=%.2f verdict=sync shrink", actual, local_sz, open_orders_sell_sz, balance_delta)
+                return "sync"
+            verdict = "unblock"
+            self._balance_at_ambiguous = None
+            self.posm.clear_ambiguous()
+            self.clear_ambiguous_context()
+            logging.info("[AMB_RECON] actual=%.4f local=%.4f open_orders=%.4f balance_delta=%.2f verdict=unblock", actual, local_sz, open_orders_sell_sz, balance_delta)
+            return "unblock"
+        logging.info("[AMB_RECON] actual=%.4f local=%.4f open_orders=%.4f balance_delta=%.2f verdict=unblock", actual, local_sz, open_orders_sell_sz, balance_delta)
+        self._balance_at_ambiguous = None
+        self.posm.clear_ambiguous()
+        self.clear_ambiguous_context()
+        return "unblock"
 
     async def capture_balance_at_ambiguous(self) -> None:
         """Call after marking ambiguous; used to detect orphan position when cooldown clears."""
@@ -1072,6 +1291,9 @@ class Risk:
         self.exit_pending_reconcile = False
         self.exit_blocked_dust = False
         self.exit_blocked_reason = ""
+        self.exit_last_progress_ts = 0.0
+        self.exit_wait_settle_start_ts = 0.0
+        self.exit_terminal_reason = None
         self.last_exit_market_slug = slug
         self.last_exit_ts = now_s()
         reentry_mode = (os.getenv("SAME_MARKET_REENTRY_MODE", "until_new_slug") or "until_new_slug").strip().lower()
@@ -1115,7 +1337,10 @@ class Risk:
                     break
         elif isinstance(result, (int, float)):
             raw = float(result)
-        return raw / 1e6 if raw else 0.0
+        # CLOB returns USDC in 6 decimals (wei). Override via BALANCE_USDC_DECIMALS if API format differs.
+        decimals = _safe_int(os.getenv("BALANCE_USDC_DECIMALS"), 6)
+        divisor = 10 ** decimals if decimals >= 0 else 1e6
+        return raw / divisor if raw else 0.0
 
     def _parse_allowance(self, result) -> float:
         raw = 0.0
@@ -1175,7 +1400,18 @@ class Risk:
                 self._cached_usdc = self._parse_usdc(result)
                 self._cached_allow = self._parse_allowance(result)
                 self._last_check = now_s()
-                logging.info(f"[BAL] USDC={self._cached_usdc:.2f} ALLOW={self._cached_allow:.2f}")
+                funder = (os.getenv("POLY_FUNDER") or "").strip()
+                wallet_s = f" wallet={funder[:10]}...{funder[-6:]}" if funder and len(funder) > 18 else ""
+                logging.info(f"[BAL] USDC={self._cached_usdc:.2f} ALLOW={self._cached_allow:.2f}{wallet_s}")
+                if (
+                    self._cached_usdc < 10
+                    and os.getenv("BALANCE_MISMATCH_WARN", "1") == "1"
+                    and not self._balance_mismatch_warned
+                ):
+                    self._balance_mismatch_warned = True
+                    logging.warning(
+                        "[BAL] CLOB returns the balance of POLY_FUNDER. For balance *inside* Polymarket (deposit), set POLY_FUNDER to your Polymarket proxy/deposit address (app: Deposit or Settings → Wallet), not your MetaMask address."
+                    )
                 return self._cached_usdc, self._cached_allow
             except Exception as e:
                 logging.warning(f"[BAL] fetch failed: {e}")
@@ -1237,50 +1473,19 @@ class Risk:
                         )
                     self._last_can_trade_block_reason = "same_market_reentry_block"
                     return False, "same_market_reentry_block"
-        # если submission state неоднозначен, блокируем новые входы на короткий период
+        # если submission state неоднозначен — fast/slow reconcile polls, then unblock or sync
         if self.posm is not None and self.posm.entry_state_uncertain:
-            ambiguous_cooldown = _safe_float(os.getenv("AMBIGUOUS_COOLDOWN_SEC"), 60.0)
-            ambiguous_poll_interval = _safe_float(os.getenv("AMBIGUOUS_BALANCE_POLL_INTERVAL_SEC"), 15.0)
             now_amb = now_s()
-            within_cooldown = (now_amb - self.posm.entry_state_ts) < ambiguous_cooldown
-            if within_cooldown:
-                # During cooldown: periodically poll balance to clear ambiguous early if order actually filled
-                if (now_amb - self._ambiguous_balance_check_ts) >= ambiguous_poll_interval:
-                    self._ambiguous_balance_check_ts = now_amb
-                    bal, _ = await self.refresh_balance()
-                    drop_threshold = 0.70 * self.max_usd_per_trade
-                    if self._balance_at_ambiguous is not None and bal < self._balance_at_ambiguous - drop_threshold:
-                        logging.info(
-                            "[GUARD] ambiguous state reconciled by balance drop (early poll) -> likely filled (%.2f -> %.2f)",
-                            self._balance_at_ambiguous, bal,
-                        )
-                        self._balance_at_ambiguous = None
-                        self.posm.clear_ambiguous()
-                        # fall through — allow trade
-                    else:
-                        return False, "ambiguous_state"
-                else:
-                    return False, "ambiguous_state"
-                # if we fell through (early clear), continue to rest of can_trade
-            else:
-                # cooldown прошёл — проверяем: если баланс упал на 70%+ от размера сделки, считаем ордер исполненным
-                bal, _ = await self.refresh_balance()
-                drop_threshold = 0.70 * self.max_usd_per_trade
-                if self._balance_at_ambiguous is not None and bal < self._balance_at_ambiguous - drop_threshold:
-                    logging.info(
-                        "[GUARD] ambiguous state reconciled by balance drop -> likely filled (%.2f -> %.2f)",
-                        self._balance_at_ambiguous, bal,
-                    )
-                    self._balance_at_ambiguous = None
-                    self.posm.clear_ambiguous()
-                else:
-                    if self._balance_at_ambiguous is not None:
-                        logging.info(
-                            "[GUARD] cooldown expired, balance unchanged (%.2f) -> order likely failed, entries unblocked",
-                            bal,
-                        )
-                    self._balance_at_ambiguous = None
-                    self.posm.clear_ambiguous()
+            fast_polls = _safe_int(os.getenv("AMBIGUOUS_RECONCILE_FAST_POLLS"), 6)
+            fast_interval = _safe_float(os.getenv("AMBIGUOUS_RECONCILE_FAST_INTERVAL_SEC"), 2.0)
+            slow_interval = _safe_float(os.getenv("AMBIGUOUS_RECONCILE_SLOW_INTERVAL_SEC"), 5.0)
+            interval = fast_interval if self._ambiguous_reconcile_poll_count < fast_polls else slow_interval
+            if (now_amb - self._last_ambiguous_reconcile_ts) < interval and self._last_ambiguous_reconcile_ts > 0:
+                return False, "ambiguous_state"
+            verdict = await self.reconcile_after_ambiguous_submit()
+            if verdict in ("unblock", "sync"):
+                return True, "ok"
+            return False, "ambiguous_state"
 
         if now_s() < self._cooldown_until:
             return False, "cooldown"
@@ -1363,11 +1568,25 @@ class PositionManager:
         self.open_ts = None
         self.closing = False
         self._force_exit_reason = None
-        # когда есть сомнения в состоянии (ambiguous submit / orphan pos), блокируем новые входы до reconcile
         self.entry_state_uncertain = False
         self.entry_state_reason = ""
         self.entry_state_ts = 0.0
-
+        self.entry_mid_px = None
+        self.peak_pnl_pct = 0.0
+        self.peak_bid_px = None
+        self.peak_mid_px = None
+        self.worst_pnl_pct = 0.0
+        self.best_pnl_ts = None
+        self.last_positive_pnl_ts = None
+        self.last_peak_update_ts = None
+        self.favorable_move_started_ts = None
+        self.adverse_move_started_ts = None
+        self.exit_armed_ts = None
+        self.take_profit_armed = False
+        self.trailing_armed = False
+        self.thesis_broken_streak = 0
+        self.adverse_streak = 0
+        self.weak_momentum_streak = 0
         self.hold_max_s = _safe_int(os.getenv("HOLD_MAX_SEC"), 35)
         self.take_profit_pct = _safe_float(os.getenv("TAKE_PROFIT_PCT"), 0.12)
         self.stop_loss_pct = _safe_float(os.getenv("STOP_LOSS_PCT"), 0.12)
@@ -1387,18 +1606,54 @@ class PositionManager:
     def has_pos(self):
         return self.pos_token is not None and self.size > 0
 
-    def open(self, token_id: str, size: float, entry_price: float, entry_type: Optional[str] = None):
+    def open(self, token_id: str, size: float, entry_price: float, entry_type: Optional[str] = None, entry_mid_px: Optional[float] = None):
         self.pos_token = token_id
         self.size = float(size)
         self.entry_price = float(entry_price)
         self.open_ts = now_s()
         self.closing = False
-        self.entry_type = entry_type  # arb, mm, lag, squeeze, simple_mom (for PnL by strategy)
+        self.entry_type = entry_type
+        self.entry_mid_px = float(entry_mid_px) if entry_mid_px is not None else None
+        self.peak_pnl_pct = 0.0
+        self.peak_bid_px = None
+        self.peak_mid_px = None
+        self.worst_pnl_pct = 0.0
+        self.best_pnl_ts = None
+        self.last_positive_pnl_ts = None
+        self.last_peak_update_ts = None
+        self.favorable_move_started_ts = None
+        self.adverse_move_started_ts = None
+        self.exit_armed_ts = None
+        self.take_profit_armed = False
+        self.trailing_armed = False
+        self.thesis_broken_streak = 0
+        self.adverse_streak = 0
+        self.weak_momentum_streak = 0
 
     def clear(self):
-        self.pos_token, self.size, self.entry_price, self.open_ts, self.closing = None, 0.0, 0.0, None, False
+        self.pos_token = None
+        self.size = 0.0
+        self.entry_price = 0.0
+        self.open_ts = None
+        self.closing = False
         self.entry_type = None
+        self.entry_mid_px = None
         self._force_exit_reason = None
+        self.peak_pnl_pct = 0.0
+        self.peak_bid_px = None
+        self.peak_mid_px = None
+        self.worst_pnl_pct = 0.0
+        self.best_pnl_ts = None
+        self.last_positive_pnl_ts = None
+        self.last_peak_update_ts = None
+        self.favorable_move_started_ts = None
+        self.adverse_move_started_ts = None
+        self.exit_armed_ts = None
+        self.take_profit_armed = False
+        self.trailing_armed = False
+        self.thesis_broken_streak = 0
+        self.adverse_streak = 0
+        self.weak_momentum_streak = 0
 
     def mark_ambiguous(self, reason: str):
         self.entry_state_uncertain = True
@@ -1609,6 +1864,8 @@ class Executor:
 
     async def _ioc_buy_impl(self, token_id: str, px: float, size: float):
         async with self._order_lock:
+            if self._risk:
+                self._risk.set_ambiguous_context(BUY_SIDE, token_id, size, size * px)
             order = OrderArgs(token_id=token_id, price=px, size=size, side=BUY_SIDE)
             signed = await _call_with_retry(self.client.create_order, order, tag="create_order")
             resp = None
@@ -1636,6 +1893,15 @@ class Executor:
                             self._risk.invalidate_balance_cache()
                         logging.warning(f"[ORDER] LIVE BUY failed: not enough balance/allowance err={e}")
                         return {"success": False, "error": str(e)}
+                    if "invalid signature" in msg.lower():
+                        if self._risk and not getattr(self._risk, "_invalid_signature_hint_logged", False):
+                            self._risk._invalid_signature_hint_logged = True
+                            logging.warning(
+                                "[ORDER] invalid signature: POLY_PRIVATE_KEY must be the key that CONTROLS your Polymarket wallet. If you log in with email/Google, export key in Polymarket Settings and use POLY_SIGNATURE_TYPE=1. Do not use MetaMask key unless the account is connected via MetaMask."
+                            )
+                        if self._risk:
+                            self._risk.invalidate_balance_cache()
+                        return {"success": False, "error": str(e), "reason": "invalid_signature"}
                     # Never retry on ambiguous: we cannot know if the first request reached the exchange (idempotency)
                     if amb:
                         await self._mark_ambiguous("post_order_market", e)
@@ -1687,6 +1953,8 @@ class Executor:
             return {"success": True, "filled_size": size, "avg_price": px, "fee": 0.0}
 
         async with self._order_lock:
+            if self._risk:
+                self._risk.set_ambiguous_context(SELL_SIDE, token_id, size, size * px)
             order = OrderArgs(token_id=token_id, price=px, size=size, side=SELL_SIDE)
             signed = await _call_with_retry(self.client.create_order, order, tag="create_order")
             try:
@@ -1712,6 +1980,15 @@ class Executor:
                         self._risk.invalidate_balance_cache()
                     logging.warning(f"[ORDER] LIVE SELL failed: not enough balance/allowance err={e}")
                     return {"success": False, "error": str(e), "needs_reconcile": True, "reason": "not_enough_balance"}
+                if "invalid signature" in msg.lower():
+                    if self._risk and not getattr(self._risk, "_invalid_signature_hint_logged", False):
+                        self._risk._invalid_signature_hint_logged = True
+                        logging.warning(
+                            "[ORDER] invalid signature: POLY_PRIVATE_KEY must be the key that CONTROLS your Polymarket wallet. If you log in with email/Google, export key in Polymarket Settings and use POLY_SIGNATURE_TYPE=1. Do not use MetaMask key unless the account is connected via MetaMask."
+                        )
+                    if self._risk:
+                        self._risk.invalidate_balance_cache()
+                    return {"success": False, "error": str(e), "reason": "invalid_signature"}
                 if self._risk:
                     self._risk.invalidate_balance_cache()
                 raise
@@ -1868,16 +2145,30 @@ class Executor:
             return None
 
 # ---------- WS with reconnect ----------
-async def btc_ws_loop(btc: BTCFeed, stop_evt: asyncio.Event):
+async def btc_ws_loop(
+    btc: BTCFeed,
+    stop_evt: asyncio.Event,
+    heartbeat: Optional[dict] = None,
+    reconnect_evt: Optional[asyncio.Event] = None,
+):
     first_tick_logged = False
     while not stop_evt.is_set():
         try:
             async with websockets.connect(BINANCE_WS, ping_interval=20) as ws:
                 logging.info("[BTC_WS] connected")
                 while not stop_evt.is_set():
+                    if reconnect_evt is not None and reconnect_evt.is_set():
+                        reconnect_evt.clear()
+                        if heartbeat is not None:
+                            heartbeat["btc_feed_primed"] = False
+                        break
                     raw = await ws.recv()
                     j = json.loads(raw)
-                    btc.update(float(j["T"]) / 1000.0, float(j["p"]))
+                    ts = float(j["T"]) / 1000.0
+                    btc.update(ts, float(j["p"]))
+                    if heartbeat is not None:
+                        heartbeat["last_btc_tick_ts"] = now_s()
+                        heartbeat["btc_feed_primed"] = True
                     if not first_tick_logged:
                         first_tick_logged = True
                         logging.info(f"[BTC_WS] first tick price={float(j['p']):.2f}")
@@ -1890,8 +2181,13 @@ async def poly_ws_producer(
     stop_evt: asyncio.Event,
     poly_q: asyncio.Queue,
     poly_stats: dict,
+    heartbeat: Optional[dict] = None,
+    reconnect_evt: Optional[asyncio.Event] = None,
+    pending_book_by_asset: Optional[dict] = None,
 ):
-    """Ingest only: recv -> parse -> put in queue (maxsize=1, last-value cache)."""
+    """Ingest: recv -> parse. If pending_book_by_asset given, coalesce per asset and put 'tick'; else put raw msg."""
+    import time
+    asset_set = set(asset_ids) if asset_ids else set()
     while not stop_evt.is_set():
         try:
             async with websockets.connect(
@@ -1904,18 +2200,41 @@ async def poly_ws_producer(
                     "custom_feature_enabled": True,
                 }))
                 while not stop_evt.is_set():
+                    if reconnect_evt is not None and reconnect_evt.is_set():
+                        reconnect_evt.clear()
+                        if heartbeat is not None:
+                            heartbeat["book_feed_primed"] = False
+                        break
                     raw = await ws.recv()
                     try:
                         msg = json.loads(raw)
                     except Exception:
                         continue
                     poly_stats["in"] = poly_stats.get("in", 0) + 1
-                    try:
-                        poly_q.put_nowait(msg)
-                    except asyncio.QueueFull:
-                        poly_stats["drop"] = poly_stats.get("drop", 0) + 1
-                        _ = poly_q.get_nowait()
-                        poly_q.put_nowait(msg)
+                    if pending_book_by_asset is not None and asset_set:
+                        t = time.time()
+                        parsed = parse_book_msg(msg)
+                        if parsed:
+                            aid, bid, ask = parsed
+                            if aid in asset_set:
+                                prev = pending_book_by_asset.get(aid, (None, None, 0))
+                                pending_book_by_asset[aid] = (bid or prev[0], ask or prev[1], t)
+                        if isinstance(msg, dict) and "price_changes" in msg:
+                            for aid, tb, ta in parse_price_changes(msg):
+                                if aid in asset_set:
+                                    prev = pending_book_by_asset.get(aid, (None, None, 0))
+                                    pending_book_by_asset[aid] = (tb or prev[0], ta or prev[1], t)
+                        try:
+                            poly_q.put_nowait("tick")
+                        except asyncio.QueueFull:
+                            poly_stats["drop"] = poly_stats.get("drop", 0) + 1
+                    else:
+                        try:
+                            poly_q.put_nowait(msg)
+                        except asyncio.QueueFull:
+                            poly_stats["drop"] = poly_stats.get("drop", 0) + 1
+                            _ = poly_q.get_nowait()
+                            poly_q.put_nowait(msg)
         except Exception as e:
             logging.warning(f"[POLY_WS] disconnected: {e} -> reconnect in 5s")
             await asyncio.sleep(5)
@@ -1938,10 +2257,10 @@ async def poll_l1_books(
     stop_evt: asyncio.Event,
     interval_s: float = 0.5,
     market_expired_evt: asyncio.Event | None = None,
+    heartbeat: Optional[dict] = None,
+    on_book_update=None,
 ):
-    """REST L1 poller: best bid/ask. Trading decisions use this, not WS.
-    If market_expired_evt is provided, sets it when 404 (no orderbook) detected for all tokens.
-    """
+    """REST L1 poller: best bid/ask. If on_book_update(asset_id, best_bid, best_ask, ts) is provided, call it for full replace; else write to book directly."""
     def _to_px_sz(x):
         if isinstance(x, dict):
             return float(x.get("price", 0)), float(x.get("size", 0))
@@ -1995,9 +2314,18 @@ async def poll_l1_books(
                 ob = await asyncio.to_thread(get_book, tid)
                 bids = getattr(ob, "bids", None) or (ob.get("bids") if isinstance(ob, dict) else []) or []
                 asks = getattr(ob, "asks", None) or (ob.get("asks") if isinstance(ob, dict) else []) or []
-                book[tid]["bid"] = _best_bid(bids)
-                book[tid]["ask"] = _best_ask(asks)
-                book[tid]["ts"] = now_s()
+                best_bid = _best_bid(bids)
+                best_ask = _best_ask(asks)
+                ts = now_s()
+                if on_book_update is not None:
+                    on_book_update(tid, best_bid, best_ask, ts)
+                else:
+                    book[tid]["bid"] = best_bid
+                    book[tid]["ask"] = best_ask
+                    book[tid]["ts"] = ts
+                    if heartbeat is not None:
+                        heartbeat["last_book_update_ts"] = ts
+                        heartbeat["book_feed_primed"] = True
                 consecutive_404_cycles = 0
                 saw_any_book = True
             except Exception as e:
@@ -2161,6 +2489,7 @@ async def run_bot(slug: str):
         risk._entry_in_flight = False
         metrics.last_skip_reason = ""
         metrics.last_skip_ts = 0.0
+        risk.clear_entry_backoff_on_new_slug(resolved_slug)
 
         market_expired_evt = asyncio.Event()
         market_generation_id[0] += 1
@@ -2172,11 +2501,44 @@ async def run_bot(slug: str):
 
         prop_task = asyncio.create_task(propagate_stop())
 
-        # book with timestamps
+        # book with timestamps (mirror of active_book_state for backward compat)
         book = {
             yes_token: {"bid": None, "ask": None, "ts": 0.0},
             no_token: {"bid": None, "ask": None, "ts": 0.0},
         }
+        active_book_state: dict = {}  # asset_id -> { best_bid, best_ask, last_*_ts, book_seq, strict_valid, usable_l1, invalid_reason, is_valid=usable_l1 }
+        book_seq: list = [0]  # mutable so apply_book_update can increment
+        entry_momentum_history: list = []  # (ts, want_yes) for confirmation ticks
+
+        def normalize_level(level) -> Tuple[Optional[float], Optional[float], float]:
+            """Single normalization: level -> (px, sz, notional). Missing/invalid -> None; no fake zero-price."""
+            if level is None:
+                return None, None, 0.0
+            if isinstance(level, (list, tuple)) and len(level) >= 1:
+                try:
+                    px = float(level[0]) if level[0] is not None else None
+                except (TypeError, ValueError):
+                    return None, None, 0.0
+                sz: Optional[float] = None
+                if len(level) >= 2 and level[1] is not None:
+                    try:
+                        sz = float(level[1])
+                    except (TypeError, ValueError):
+                        pass
+                notional = (px * sz) if (px is not None and sz is not None) else 0.0
+                return px, sz, notional
+            if isinstance(level, (int, float)):
+                return float(level), None, 0.0
+            return None, None, 0.0
+
+        def _level_price(level) -> Optional[float]:
+            px, _, _ = normalize_level(level)
+            return px
+
+        def _level_notional(level) -> float:
+            _, _, notional = normalize_level(level)
+            return notional
+
         # Stale position from previous market (e.g. 404 before we could close) - can't trade it; full exit finalization
         if posm.has_pos() and posm.pos_token not in book:
             logging.warning(f"[POS] stale pos token not in new market book -> clearing (will resolve on Polymarket)")
@@ -2187,46 +2549,317 @@ async def run_bot(slug: str):
             risk.on_close()
 
         book_updated_once = False
-        poly_q: asyncio.Queue = asyncio.Queue(maxsize=1)
+        poly_q: asyncio.Queue = asyncio.Queue(maxsize=4)
         poly_stats: dict = {"in": 0, "drop": 0}
+        book_perf: dict = {"updates_applied": 0, "updates_skipped_same_tob": 0, "decisions": 0, "last_perf_log_ts": 0.0}
+        BOOK_STATE_MIN_DELTA_PX = _safe_float(os.getenv("BOOK_STATE_MIN_DELTA_PX"), 0.02)
+        debug_book_verbose = os.getenv("DEBUG_BOOK_VERBOSE", "0") == "1"
+        pending_book_by_asset: dict = {}  # asset_id -> (bid_pair, ask_pair, ts) for coalescing
+        degraded_market_data = False
+        degraded_since_ts = 0.0
+        recovered_since_ts = 0.0
+        DEGRADED_DROP_RATE = 0.20
+        RECOVERED_DROP_RATE = 0.10
+        DEGRADED_HOLD_SEC = 10.0
+        decision_on_timer_only = os.getenv("DECISION_ON_TIMER_ONLY", "0") == "1"
+        decision_timer_interval_sec = _safe_float(os.getenv("DECISION_TIMER_INTERVAL_SEC"), 1.0)
+        book_state_summary_interval_sec = _safe_float(os.getenv("BOOK_STATE_SUMMARY_INTERVAL_SEC"), 15.0)
+        health_print_interval_sec = _safe_float(os.getenv("HEALTH_PRINT_INTERVAL_SEC"), 30.0)
+        perf_log_interval_sec = 10.0
+        heartbeat: dict = {
+            "last_btc_tick_ts": 0.0,
+            "last_book_update_ts": 0.0,
+            "last_strategy_eval_ts": 0.0,
+            "last_wsq_progress_ts": 0.0,
+            "last_wsq_in": 0,
+            "last_market_refresh_ts": now_s(),
+            "btc_feed_primed": False,
+            "book_feed_primed": False,
+        }
+        reconnect_btc_evt: asyncio.Event = asyncio.Event()
+        reconnect_market_evt: asyncio.Event = asyncio.Event()
+        recovery_required_evt: asyncio.Event = asyncio.Event()
+        session_start_ts = now_s()
+
+        book_stale_side_sec = _safe_float(os.getenv("BOOK_STALE_SIDE_SEC"), 30.0)
+        book_side_stale_ms = _safe_float(os.getenv("BOOK_SIDE_STALE_MS"), (book_stale_side_sec * 1000.0))
+        book_saturated_bid = _safe_float(os.getenv("BOOK_SATURATED_BID_THRESHOLD"), 0.99)
+        book_saturated_ask = _safe_float(os.getenv("BOOK_SATURATED_ASK_THRESHOLD"), 0.01)
+        book_usable_max_spread_bps = _safe_float(os.getenv("BOOK_USABLE_MAX_SPREAD_BPS"), 5000.0)
+        book_state_log_interval = _safe_float(os.getenv("BOOK_STATE_LOG_INTERVAL_SEC"), 30.0)
+        book_invalid_streak_threshold = _safe_int(os.getenv("BOOK_INVALID_STREAK_THRESHOLD"), 3)
+        book_invalid_for_ms = _safe_float(os.getenv("BOOK_INVALID_FOR_MS"), 400.0)
+        book_last_invalid_log_ts: dict = {}
+        book_last_state_log_ts: dict = {}
+        book_last_summary_ts = 0.0
+        book_bad_streak: dict = {}  # asset_id -> int
+        book_first_bad_ts: dict = {}  # asset_id -> float (ms)
+        book_metrics: dict = {
+            "usable_l1_true": 0,
+            "usable_l1_false": 0,
+            "invalid_transitions": 0,
+            "invalid_reasons": {},
+            "partial_updates_preserved_side": 0,
+            "hysteresis_blocked_invalidations": 0,
+        }
+
+        def _raw_invalid_reason(asset_id: str) -> Optional[str]:
+            """Compute raw invalid reason from current sides (no hysteresis). Specific reasons only."""
+            st = active_book_state.get(asset_id, {})
+            bid_px, bid_sz, _ = normalize_level(st.get("best_bid"))
+            ask_px, ask_sz, _ = normalize_level(st.get("best_ask"))
+            now = now_s()
+            last_bid_ts = st.get("last_bid_ts") or 0.0
+            last_ask_ts = st.get("last_ask_ts") or 0.0
+            if bid_px is None and ask_px is None:
+                return "missing_both"
+            if bid_px is None:
+                return "missing_bid"
+            if ask_px is None:
+                return "missing_ask"
+            if not (0.0 < float(bid_px) < 1.0 and 0.0 < float(ask_px) < 1.0):
+                return "out_of_range_px"
+            if float(bid_px) >= float(ask_px):
+                return "crossed_market"
+            bid_sz_val = bid_sz if bid_sz is not None else 0.0
+            ask_sz_val = ask_sz if ask_sz is not None else 0.0
+            if bid_sz_val <= 0 or ask_sz_val <= 0:
+                return "empty_after_partial_update"
+            stale_ms = (now - last_bid_ts) * 1000.0 if last_bid_ts else 1e9
+            if book_side_stale_ms > 0 and stale_ms > book_side_stale_ms:
+                return "stale_side"
+            stale_ask_ms = (now - last_ask_ts) * 1000.0 if last_ask_ts else 1e9
+            if book_side_stale_ms > 0 and stale_ask_ms > book_side_stale_ms:
+                return "stale_side"
+            if ask_px <= book_saturated_ask or bid_px >= book_saturated_bid:
+                return "saturated_market"
+            return None
+
+        def _recompute_book_validity(asset_id: str) -> None:
+            """Set strict_valid, usable_l1, invalid_reason with hysteresis. Does not overwrite best_bid/best_ask."""
+            st = active_book_state.get(asset_id, {})
+            bid_px, bid_sz, _ = normalize_level(st.get("best_bid"))
+            ask_px, ask_sz, _ = normalize_level(st.get("best_ask"))
+            now = now_s()
+            raw_reason = _raw_invalid_reason(asset_id)
+            spread_bps = 0.0
+            if bid_px is not None and ask_px is not None and ask_px > bid_px:
+                spread_bps = (float(ask_px) - float(bid_px)) * 10000.0
+            usable_raw = (
+                raw_reason is None
+                and bid_px is not None
+                and ask_px is not None
+                and 0.0 < float(bid_px) < 1.0
+                and 0.0 < float(ask_px) < 1.0
+                and float(bid_px) < float(ask_px)
+                and spread_bps >= 0
+                and (book_usable_max_spread_bps <= 0 or spread_bps <= book_usable_max_spread_bps)
+            )
+            strict_valid = raw_reason is None
+            prev_usable = st.get("usable_l1", False)
+            prev_reason = st.get("invalid_reason")
+            if not usable_raw:
+                streak = book_bad_streak.get(asset_id, 0) + 1
+                book_bad_streak[asset_id] = streak
+                first_bad = book_first_bad_ts.get(asset_id)
+                if first_bad is None:
+                    book_first_bad_ts[asset_id] = now * 1000.0
+                    first_bad = now * 1000.0
+                bad_duration_ms = (now * 1000.0) - first_bad
+                if streak < book_invalid_streak_threshold and bad_duration_ms < book_invalid_for_ms:
+                    st["usable_l1"] = prev_usable
+                    st["strict_valid"] = False
+                    st["invalid_reason"] = prev_reason or raw_reason
+                    book_metrics["hysteresis_blocked_invalidations"] = book_metrics.get("hysteresis_blocked_invalidations", 0) + 1
+                else:
+                    st["usable_l1"] = False
+                    st["strict_valid"] = False
+                    st["invalid_reason"] = raw_reason
+                    if prev_usable:
+                        book_metrics["invalid_transitions"] = book_metrics.get("invalid_transitions", 0) + 1
+                    book_metrics["invalid_reasons"][raw_reason or "unknown"] = book_metrics["invalid_reasons"].get(raw_reason or "unknown", 0) + 1
+            else:
+                book_bad_streak[asset_id] = 0
+                book_first_bad_ts[asset_id] = None
+                st["usable_l1"] = True
+                st["strict_valid"] = True
+                st["invalid_reason"] = None
+                if not prev_usable:
+                    book_metrics["invalid_transitions"] = book_metrics.get("invalid_transitions", 0) + 1
+            if st.get("usable_l1"):
+                book_metrics["usable_l1_true"] = book_metrics.get("usable_l1_true", 0) + 1
+            else:
+                book_metrics["usable_l1_false"] = book_metrics.get("usable_l1_false", 0) + 1
+            st["is_valid"] = st["usable_l1"]
+
+        def _mirror_book_to_legacy(asset_id: str) -> None:
+            st = active_book_state.get(asset_id, {})
+            book[asset_id]["bid"] = st.get("best_bid")
+            book[asset_id]["ask"] = st.get("best_ask")
+            book[asset_id]["ts"] = st.get("last_event_ts") or 0.0
+
+        def _book_state_log_regime(asset_id: str, event_type: str, sides_updated: str, usable_l1: bool, invalid_reason: Optional[str], prev_usable: bool, prev_bid_px=None, prev_ask_px=None, prev_reason: Optional[str] = None) -> None:
+            """Log only when bid/ask/usable_l1/reason changed or BOOK_STATE_LOG_INTERVAL_SEC elapsed."""
+            now = now_s()
+            st = active_book_state.get(asset_id, {})
+            cur_bid = _level_price(st.get("best_bid"))
+            cur_ask = _level_price(st.get("best_ask"))
+            cur_reason = st.get("invalid_reason") or "-"
+            prev_r = prev_reason if prev_reason is not None else "-"
+            min_delta = BOOK_STATE_MIN_DELTA_PX
+            bid_changed = (cur_bid is None) != (prev_bid_px is None) or (cur_bid is not None and prev_bid_px is not None and abs(float(cur_bid) - float(prev_bid_px)) >= min_delta)
+            ask_changed = (cur_ask is None) != (prev_ask_px is None) or (cur_ask is not None and prev_ask_px is not None and abs(float(cur_ask) - float(prev_ask_px)) >= min_delta)
+            usable_changed = usable_l1 != prev_usable
+            reason_changed = (cur_reason != prev_r)
+            last_log = book_last_state_log_ts.get(asset_id, 0.0)
+            interval_elapsed = (now - last_log) >= book_state_log_interval
+            if not (bid_changed or ask_changed or usable_changed or reason_changed or interval_elapsed):
+                return
+            book_last_state_log_ts[asset_id] = now
+            if usable_changed:
+                if usable_l1:
+                    logging.info("[BOOK_STATE] usable_l1=True asset=%s event_type=%s", asset_id[:24] + "...", event_type)
+                else:
+                    logging.info("[BOOK_STATE] usable_l1=False asset=%s reason=%s event_type=%s", asset_id[:24] + "...", invalid_reason or "unknown", event_type)
+                return
+            if not usable_l1 and invalid_reason:
+                book_last_invalid_log_ts[asset_id] = now
+            if debug_book_verbose:
+                bid_s = f"{float(cur_bid):.4f}" if cur_bid is not None else "None"
+                ask_s = f"{float(cur_ask):.4f}" if cur_ask is not None else "None"
+                logging.info("[BOOK_STATE] asset=%s event_type=%s sides_updated=%s usable_l1=%s bid=%s ask=%s reason=%s", asset_id[:24] + "...", event_type, sides_updated, usable_l1, bid_s, ask_s, cur_reason)
+
+        def apply_book_snapshot(asset_id: str, best_bid_pair: Optional[tuple], best_ask_pair: Optional[tuple], book_ts: float) -> None:
+            """Full replace when both sides are provided (e.g. REST L1). Do not use for partial WS updates."""
+            nonlocal book_updated_once
+            book_updated_once = True
+            prev = active_book_state.get(asset_id, {})
+            prev_usable = prev.get("usable_l1", False)
+            book_seq[0] += 1
+            state = {
+                "best_bid": best_bid_pair,
+                "best_ask": best_ask_pair,
+                "last_bid_ts": book_ts,
+                "last_ask_ts": book_ts,
+                "last_event_ts": book_ts,
+                "book_seq": book_seq[0],
+            }
+            active_book_state[asset_id] = state
+            _recompute_book_validity(asset_id)
+            _mirror_book_to_legacy(asset_id)
+            heartbeat["last_book_update_ts"] = book_ts
+            heartbeat["book_feed_primed"] = True
+            _book_state_log_regime(asset_id, "snapshot", "both", state.get("usable_l1", False), state.get("invalid_reason"), prev_usable, _level_price(prev.get("best_bid")), _level_price(prev.get("best_ask")), prev.get("invalid_reason"))
+
+        def apply_book_delta(asset_id: str, bid_pair_or_none: Optional[tuple], ask_pair_or_none: Optional[tuple], book_ts: float) -> None:
+            """Update only the side(s) provided; do not overwrite the other side with None."""
+            nonlocal book_updated_once
+            book_updated_once = True
+            prev = active_book_state.get(asset_id, {})
+            prev_usable = prev.get("usable_l1", False)
+            prev_bid = prev.get("best_bid")
+            prev_ask = prev.get("best_ask")
+            new_bid = prev_bid
+            new_ask = prev_ask
+            if bid_pair_or_none is not None:
+                bp, bs, _ = normalize_level(bid_pair_or_none)
+                if bp is not None:
+                    new_bid = bid_pair_or_none
+                else:
+                    book_metrics["partial_updates_preserved_side"] = book_metrics.get("partial_updates_preserved_side", 0) + 1
+            if ask_pair_or_none is not None:
+                ap, as_, _ = normalize_level(ask_pair_or_none)
+                if ap is not None:
+                    new_ask = ask_pair_or_none
+                else:
+                    book_metrics["partial_updates_preserved_side"] = book_metrics.get("partial_updates_preserved_side", 0) + 1
+            last_bid_ts = book_ts if (bid_pair_or_none is not None and new_bid is not prev_bid) else (prev.get("last_bid_ts") or 0.0)
+            last_ask_ts = book_ts if (ask_pair_or_none is not None and new_ask is not prev_ask) else (prev.get("last_ask_ts") or 0.0)
+            sides_updated = []
+            if bid_pair_or_none is not None and new_bid is not prev_bid:
+                sides_updated.append("bid")
+            if ask_pair_or_none is not None and new_ask is not prev_ask:
+                sides_updated.append("ask")
+            book_seq[0] += 1
+            state = {
+                "best_bid": new_bid,
+                "best_ask": new_ask,
+                "last_bid_ts": last_bid_ts,
+                "last_ask_ts": last_ask_ts,
+                "last_event_ts": book_ts,
+                "book_seq": book_seq[0],
+            }
+            active_book_state[asset_id] = state
+            _recompute_book_validity(asset_id)
+            _mirror_book_to_legacy(asset_id)
+            heartbeat["last_book_update_ts"] = book_ts
+            heartbeat["book_feed_primed"] = True
+            _book_state_log_regime(asset_id, "delta", "|".join(sides_updated) or "none", state.get("usable_l1", False), state.get("invalid_reason"), prev_usable, _level_price(prev.get("best_bid")), _level_price(prev.get("best_ask")), prev.get("invalid_reason"))
+
+        def apply_book_update(asset_id: str, best_bid_pair: Optional[tuple], best_ask_pair: Optional[tuple], book_ts: float) -> None:
+            """Unified entry: skip if top-of-book unchanged (dedup); else snapshot or delta."""
+            has_bid = best_bid_pair is not None and len(best_bid_pair) >= 1 and best_bid_pair[0] is not None
+            has_ask = best_ask_pair is not None and len(best_ask_pair) >= 1 and best_ask_pair[0] is not None
+            prev = active_book_state.get(asset_id, {})
+            prev_bid_px, _, _ = normalize_level(prev.get("best_bid"))
+            prev_ask_px, _, _ = normalize_level(prev.get("best_ask"))
+            new_bid_px, _, _ = normalize_level(best_bid_pair if has_bid else None)
+            new_ask_px, _, _ = normalize_level(best_ask_pair if has_ask else None)
+            def _same(a: Optional[float], b: Optional[float]) -> bool:
+                if a is None and b is None:
+                    return True
+                if a is None or b is None:
+                    return False
+                return abs(float(a) - float(b)) <= 1e-9
+            if _same(prev_bid_px, new_bid_px) and _same(prev_ask_px, new_ask_px):
+                book_perf["updates_skipped_same_tob"] = book_perf.get("updates_skipped_same_tob", 0) + 1
+                return
+            book_perf["updates_applied"] = book_perf.get("updates_applied", 0) + 1
+            if has_bid and has_ask:
+                apply_book_snapshot(asset_id, best_bid_pair, best_ask_pair, book_ts)
+            else:
+                apply_book_delta(asset_id, best_bid_pair if has_bid else None, best_ask_pair if has_ask else None, book_ts)
 
         def book_fresh(tid: str) -> bool:
-            return (now_s() - book[tid]["ts"]) * 1000.0 < max_book_age_ms
+            st = active_book_state.get(tid, {})
+            ts = st.get("last_event_ts") or 0.0
+            return (now_s() - ts) * 1000.0 < max_book_age_ms
 
         def have_l1() -> bool:
-            return (
-                book[yes_token]["bid"] and book[yes_token]["ask"]
-                and book[no_token]["bid"] and book[no_token]["ask"]
-                and book_fresh(yes_token) and book_fresh(no_token)
-            )
+            """L1 ready when both assets have usable_l1 and fresh book (for trading decisions)."""
+            for tid in (yes_token, no_token):
+                st = active_book_state.get(tid, {})
+                if not st.get("usable_l1") or not book_fresh(tid):
+                    return False
+                if not st.get("best_bid") or not st.get("best_ask"):
+                    return False
+            return True
 
         def mid(tid: str) -> float:
-            b, a = book[tid]["bid"], book[tid]["ask"]
-            if not b or not a:
+            bp, _, _ = normalize_level(book[tid]["bid"])
+            ap, _, _ = normalize_level(book[tid]["ask"])
+            if bp is None or ap is None:
                 return 0.5
-            return (float(b[0]) + float(a[0])) / 2.0
+            return (float(bp) + float(ap)) / 2.0
 
         def spread(tid: str) -> float:
-            b, a = book[tid]["bid"], book[tid]["ask"]
-            if not b or not a:
+            bp, _, _ = normalize_level(book[tid]["bid"])
+            ap, _, _ = normalize_level(book[tid]["ask"])
+            if bp is None or ap is None:
                 return 0.0
-            return float(a[0]) - float(b[0])
+            return float(ap) - float(bp)
 
         def ask_liq_usd(tid: str) -> float:
-            a = book[tid]["ask"]
-            return float(a[0] * a[1]) if a else 0.0
+            return _level_notional(book[tid]["ask"])
 
         def bid_liq_usd(tid: str) -> float:
-            b = book[tid]["bid"]
-            return float(b[0] * b[1]) if b else 0.0
+            return _level_notional(book[tid]["bid"])
 
         def best_bid(token_id: str):
-            b = book[token_id]["bid"]
-            return float(b[0]) if b else None
+            return _level_price(book[token_id]["bid"])
 
         def best_ask(token_id: str):
-            a = book[token_id]["ask"]
-            return float(a[0]) if a else None
+            return _level_price(book[token_id]["ask"])
 
         def tte():
             if not expiry_ts:
@@ -2252,13 +2885,202 @@ async def run_bot(slug: str):
             return True, "ok"
 
         last_decision_ts = 0.0
+        last_decision_run_ts = 0.0
         debounce_task = None
+        decision_scheduled_or_running = False
         consecutive_decision_errors = 0
         DECISION_FAIL_FAST_LIMIT = 5
         last_warmup_log_ts = 0.0
         last_strat_debug_ts = 0.0
+        decision_min_interval_sec = _safe_float(os.getenv("DECISION_MIN_INTERVAL_MS"), 250.0) / 1000.0
+        last_backpressure_ts = 0.0
 
         exit_state = {"consecutive_failures": 0, "consecutive_ambiguous": 0, "reconcile_retries": 0, "last_unclear": False}
+        EXIT_TICK = 0.01
+
+        # Exit pipeline config (stateful exit model)
+        min_hold_sec = _safe_float(os.getenv("MIN_HOLD_SEC"), 15.0)
+        force_exit_near_expiry_sec = _safe_float(os.getenv("FORCE_EXIT_NEAR_EXPIRY_SEC"), 30.0)
+        exit_on_unusable_book_ms = _safe_float(os.getenv("EXIT_ON_UNUSABLE_BOOK_MS"), 15_000.0)
+        exit_signal_streak_threshold = _safe_int(os.getenv("EXIT_SIGNAL_STREAK_THRESHOLD"), 3)
+        exit_signal_for_ms = _safe_float(os.getenv("EXIT_SIGNAL_FOR_MS"), 800.0)
+        exit_hard_stop_pct = _safe_float(os.getenv("EXIT_HARD_STOP_PCT"), 0.12)
+        exit_trailing_arm_pct = _safe_float(os.getenv("EXIT_TRAILING_ARM_PCT"), 0.008)
+        exit_trailing_giveback_small_pct = _safe_float(os.getenv("EXIT_TRAILING_GIVEBACK_SMALL_PCT"), 0.005)
+        exit_trailing_giveback_medium_pct = _safe_float(os.getenv("EXIT_TRAILING_GIVEBACK_MEDIUM_PCT"), 0.008)
+        exit_trailing_giveback_large_pct = _safe_float(os.getenv("EXIT_TRAILING_GIVEBACK_LARGE_PCT"), 0.012)
+        exit_trailing_peak_small_pct = _safe_float(os.getenv("EXIT_TRAILING_PEAK_SMALL_PCT"), 0.015)
+        exit_trailing_peak_medium_pct = _safe_float(os.getenv("EXIT_TRAILING_PEAK_MEDIUM_PCT"), 0.025)
+        exit_trailing_peak_large_pct = _safe_float(os.getenv("EXIT_TRAILING_PEAK_LARGE_PCT"), 0.04)
+        exit_tp_arm_pct = _safe_float(os.getenv("EXIT_TP_ARM_PCT"), 0.01)
+        exit_adverse_min_delta_pct = _safe_float(os.getenv("EXIT_ADVERSE_MIN_DELTA_PCT"), 0.015)
+        exit_adverse_streak_threshold = _safe_int(os.getenv("EXIT_ADVERSE_STREAK_THRESHOLD"), 3)
+        exit_adverse_duration_sec = _safe_float(os.getenv("EXIT_ADVERSE_DURATION_SEC"), 10.0)
+        exit_early_tte_sec = _safe_float(os.getenv("EXIT_EARLY_TTE_SEC"), 200.0)
+        exit_mid_tte_sec = _safe_float(os.getenv("EXIT_MID_TTE_SEC"), 90.0)
+        exit_late_tte_sec = _safe_float(os.getenv("EXIT_LATE_TTE_SEC"), 45.0)
+        exit_final_tte_sec = _safe_float(os.getenv("EXIT_FINAL_TTE_SEC"), 25.0)
+        hold_max_s = _safe_float(os.getenv("HOLD_MAX_SEC"), 240.0)
+        exit_weak_mom_bps = _safe_float(os.getenv("EXIT_WEAK_MOM_BPS"), 5.0)
+        exit_thesis_broken_streak = _safe_int(os.getenv("EXIT_THESIS_BROKEN_STREAK"), 4)
+        exit_eval_log_interval_sec = _safe_float(os.getenv("EXIT_EVAL_LOG_INTERVAL_SEC"), 5.0)
+        exit_metrics = {
+            "exit_eval_count": 0,
+            "exit_signal_count": 0,
+            "exit_reason_counts": {},
+            "trailing_armed_count": 0,
+            "take_profit_armed_count": 0,
+            "hard_stop_count": 0,
+            "time_decay_exit_count": 0,
+            "book_unusable_exit_count": 0,
+            "exit_hysteresis_blocked_count": 0,
+        }
+        exit_candidate_reason = None
+        exit_candidate_streak = 0
+        exit_candidate_first_ts_ms = 0.0
+        book_unusable_since_ts = 0.0
+        last_exit_eval_log_ts = 0.0
+        last_exit_signal_reason = None
+
+        def compute_exit_reason(token: str, bid: float, mid_px: float, tte_s: Optional[float], m, held_s: float) -> Optional[str]:
+            """Stateful exit pipeline: P1 risk_emergency, P2 hard_stop, P3 trailing_giveback, P4 time_decay, P5 adverse/thesis_broken, P6 take_profit_exhaustion. Uses only safe L1; weak exits need hysteresis."""
+            nonlocal exit_candidate_reason, exit_candidate_streak, exit_candidate_first_ts_ms, exit_metrics, last_exit_eval_log_ts
+            exit_metrics["exit_eval_count"] = exit_metrics.get("exit_eval_count", 0) + 1
+            now = now_s()
+            ep = max(posm.entry_price, 1e-9)
+            pnl_pct = (float(bid) - posm.entry_price) / ep
+            # Update peak / worst / streaks
+            if pnl_pct > posm.peak_pnl_pct:
+                posm.peak_pnl_pct = pnl_pct
+                posm.peak_bid_px = bid
+                posm.peak_mid_px = mid_px
+                posm.last_peak_update_ts = now
+                posm.best_pnl_ts = now
+            if pnl_pct > 0:
+                posm.last_positive_pnl_ts = now
+            if pnl_pct < posm.worst_pnl_pct:
+                posm.worst_pnl_pct = pnl_pct
+            if pnl_pct >= exit_trailing_arm_pct:
+                if not posm.trailing_armed:
+                    exit_metrics["trailing_armed_count"] = exit_metrics.get("trailing_armed_count", 0) + 1
+                posm.trailing_armed = True
+            if pnl_pct >= exit_tp_arm_pct:
+                if not posm.take_profit_armed:
+                    exit_metrics["take_profit_armed_count"] = exit_metrics.get("take_profit_armed_count", 0) + 1
+                posm.take_profit_armed = True
+            side_val = posm.side_vs_yes(yes_token)
+            mom_bps = getattr(m, "mom_bps", 0.0) or 0.0
+            adverse_mom = (side_val == "LONG_YES" and mom_bps < -exit_weak_mom_bps) or (side_val == "LONG_NO" and mom_bps > exit_weak_mom_bps)
+            if adverse_mom and pnl_pct < 0:
+                posm.adverse_streak = getattr(posm, "adverse_streak", 0) + 1
+                if posm.adverse_move_started_ts is None:
+                    posm.adverse_move_started_ts = now
+            else:
+                posm.adverse_streak = 0
+                posm.adverse_move_started_ts = None
+            if adverse_mom:
+                posm.thesis_broken_streak = getattr(posm, "thesis_broken_streak", 0) + 1
+            else:
+                posm.thesis_broken_streak = 0
+            if abs(mom_bps) < exit_weak_mom_bps:
+                posm.weak_momentum_streak = getattr(posm, "weak_momentum_streak", 0) + 1
+            else:
+                posm.weak_momentum_streak = 0
+            giveback_pct = (posm.peak_pnl_pct - pnl_pct) if posm.peak_pnl_pct > 0 else 0.0
+            in_min_hold = held_s < min_hold_sec
+
+            def require_hysteresis(reason: str) -> bool:
+                return reason in ("trailing_giveback", "time_decay", "thesis_broken", "adverse_move", "take_profit_exhaustion")
+
+            def apply_hysteresis(candidate: str) -> Optional[str]:
+                nonlocal exit_candidate_reason, exit_candidate_streak, exit_candidate_first_ts_ms
+                if not require_hysteresis(candidate):
+                    return candidate
+                if exit_candidate_reason != candidate:
+                    exit_candidate_reason = candidate
+                    exit_candidate_streak = 1
+                    exit_candidate_first_ts_ms = now * 1000.0
+                else:
+                    exit_candidate_streak += 1
+                if exit_candidate_streak >= exit_signal_streak_threshold:
+                    exit_candidate_reason = None
+                    exit_candidate_streak = 0
+                    exit_candidate_first_ts_ms = 0.0
+                    return candidate
+                if (now * 1000.0 - exit_candidate_first_ts_ms) >= exit_signal_for_ms:
+                    exit_candidate_reason = None
+                    exit_candidate_streak = 0
+                    exit_candidate_first_ts_ms = 0.0
+                    return candidate
+                exit_metrics["exit_hysteresis_blocked_count"] = exit_metrics.get("exit_hysteresis_blocked_count", 0) + 1
+                return None
+
+            # P1 — risk_emergency / late_market_exit (no hysteresis, allowed in min_hold)
+            if posm.size <= exit_dust_threshold:
+                return "risk_emergency"
+            bid_liq = bid_liq_usd(token)
+            if bid_liq < exit_min_liq:
+                return "risk_emergency"
+            if tte_s is not None and tte_s <= force_exit_near_expiry_sec:
+                return "late_market_exit"
+
+            # P2 — hard stop (no hysteresis, allowed in min_hold)
+            if pnl_pct <= -exit_hard_stop_pct:
+                exit_metrics["hard_stop_count"] = exit_metrics.get("hard_stop_count", 0) + 1
+                return "hard_stop"
+
+            if in_min_hold:
+                exit_candidate_reason = None
+                exit_candidate_streak = 0
+                exit_candidate_first_ts_ms = 0.0
+                return None
+
+            # P3 — trailing giveback from peak
+            if posm.trailing_armed and posm.peak_pnl_pct > 0:
+                if posm.peak_pnl_pct >= exit_trailing_peak_large_pct:
+                    giveback_thresh = exit_trailing_giveback_large_pct
+                elif posm.peak_pnl_pct >= exit_trailing_peak_medium_pct:
+                    giveback_thresh = exit_trailing_giveback_medium_pct
+                else:
+                    giveback_thresh = exit_trailing_giveback_small_pct
+                if giveback_pct >= giveback_thresh:
+                    return apply_hysteresis("trailing_giveback")
+
+            # P4 — time decay by TTE zone
+            if tte_s is not None:
+                if tte_s <= exit_final_tte_sec:
+                    exit_metrics["time_decay_exit_count"] = exit_metrics.get("time_decay_exit_count", 0) + 1
+                    return "time_decay"
+                if tte_s <= exit_late_tte_sec and held_s >= hold_max_s * 0.6:
+                    r = apply_hysteresis("time_decay")
+                    if r:
+                        exit_metrics["time_decay_exit_count"] = exit_metrics.get("time_decay_exit_count", 0) + 1
+                    return r
+                if tte_s <= exit_mid_tte_sec and held_s >= hold_max_s:
+                    r = apply_hysteresis("time_decay")
+                    if r:
+                        exit_metrics["time_decay_exit_count"] = exit_metrics.get("time_decay_exit_count", 0) + 1
+                    return r
+
+            # P5 — adverse / thesis broken (streak + min adverse delta)
+            adverse_delta = (posm.entry_price - float(bid)) / ep
+            if posm.adverse_streak >= exit_adverse_streak_threshold and adverse_delta >= exit_adverse_min_delta_pct:
+                adv_dur = (now - posm.adverse_move_started_ts) if posm.adverse_move_started_ts else 0
+                if adv_dur >= exit_adverse_duration_sec:
+                    return apply_hysteresis("adverse_move")
+            if posm.thesis_broken_streak >= exit_thesis_broken_streak:
+                return apply_hysteresis("thesis_broken")
+
+            # P6 — take profit exhaustion (armed + weak momentum / bid not improving)
+            if posm.take_profit_armed and pnl_pct > 0 and posm.peak_pnl_pct >= exit_tp_arm_pct:
+                bid_stale = (posm.last_peak_update_ts and (now - posm.last_peak_update_ts) >= 8.0)
+                if posm.weak_momentum_streak >= exit_thesis_broken_streak or (tte_s is not None and tte_s <= exit_late_tte_sec) or bid_stale:
+                    return apply_hysteresis("take_profit_exhaustion")
+
+            exit_candidate_reason = None
+            exit_candidate_streak = 0
+            exit_candidate_first_ts_ms = 0.0
+            return None
 
         async def fetch_outcome_balance(token_id: str) -> Optional[float]:
             """Fetch current outcome token balance from exchange. Returns None on error."""
@@ -2314,6 +3136,15 @@ async def run_bot(slug: str):
                 logging.debug(f"[RECONCILE] get_open_orders failed: {e}")
             if actual_available is not None:
                 actual_available = max(0.0, actual_available - open_orders_size)
+                validation_status = "ok"
+                if actual_available < 0:
+                    validation_status = "negative_ignored"
+                elif local_sz > 0 and actual_available > local_sz * reconcile_max_multiplier:
+                    validation_status = "absurd_ignored"
+                logging.info(
+                    "[RECONCILE_NORMALIZED] token=%s... normalized_actual=%.4f local=%.4f open_orders=%.4f validation_status=%s",
+                    token_id[:24], actual_available, local_sz, open_orders_size, validation_status,
+                )
             else:
                 risk.last_reconcile_actual = None
                 risk.last_reconcile_status = "unknown"
@@ -2341,6 +3172,7 @@ async def run_bot(slug: str):
                 risk.exit_in_progress = False
                 risk.exit_pending_reconcile = False
                 risk.exit_blocked_dust = False
+                risk.exit_mode = "NORMAL"
                 risk.on_market_exit(resolved_slug, None, forced=True, reason="clear_local")
                 risk.on_close()
                 logging.info("[DESYNC_HEAL] local position cleared from ledger/exchange truth token=%s... local=%.4f ledger=%.4f open_orders=%.4f", token_id[:24], local_sz, ledger_sz, open_orders_size)
@@ -2357,6 +3189,7 @@ async def run_bot(slug: str):
                 risk.exit_in_progress = False
                 risk.exit_pending_reconcile = False
                 risk.exit_blocked_dust = False
+                risk.exit_mode = "NORMAL"
                 risk.on_market_exit(resolved_slug, None, forced=True, reason="desync_heal")
                 risk.on_close()
                 logging.info("[EXIT_CLEAR] position cleared after reconcile")
@@ -2373,41 +3206,138 @@ async def run_bot(slug: str):
             logging.info(f"[RECONCILE] token={token_id[:24]}... actual={actual_available:.4f} local={local_sz:.4f} open_orders={open_orders_size:.4f} action=keep")
             return actual_available, "keep"
 
+        def _exit_inventory_unsafe(res: dict, reconcile_status: Optional[str] = None) -> bool:
+            if res.get("reason") == "not_enough_balance":
+                return True
+            if res.get("needs_reconcile") or res.get("ambiguous"):
+                return True
+            if reconcile_status in ("absurd_ignored", "negative_ignored", "unknown"):
+                return True
+            if res.get("reason") == "no_liquidity" and "settlement" in (risk.exit_last_fail_reason or "").lower():
+                return True
+            return False
+
+        def _terminal_cleanup(reason: str) -> None:
+            """Full cleanup after terminal exit (dust_tail, wait_settle_timeout, etc.). Resets all exit/position state."""
+            slug = risk.active_market_slug or resolved_slug
+            posm.clear()
+            ledger.size = 0.0
+            risk.exit_in_progress = False
+            risk.exit_pending_reconcile = False
+            risk.exit_mode = "NORMAL"
+            risk.exit_last_progress_ts = 0.0
+            risk.exit_wait_settle_start_ts = 0.0
+            risk.exit_terminal_reason = None
+            risk.exit_blocked_dust = False
+            risk.exit_blocked_reason = ""
+            risk.on_market_exit(slug, None, forced=True, reason=reason)
+            risk.on_close()
+            logging.info("[EXIT_TERMINAL] reason=%s", reason)
+
+        def finalize_closed_market_state(reason: str, pnl: Optional[float], slug: str) -> None:
+            """After successful close: clear transient state, ambiguous guard, reconcile flags."""
+            risk.clear_ambiguous_context()
+            if risk.posm:
+                risk.posm.clear_ambiguous()
+            risk.exit_pending_reconcile = False
+            risk.exit_in_progress = False
+            risk.last_reconcile_actual = None
+            risk.last_reconcile_status = None
+            risk.exit_last_fail_reason = ""
+            logging.info("[STATE_RESET] close cleanup done slug=%s reason=%s pnl=%s", slug[:24] + "..." if len(slug) > 24 else slug, reason, f"{pnl:.2f}" if pnl is not None else "-")
+
+        async def _exit_slice_once(token: str, slice_sz: float, bid_px: float, exit_mode: str) -> tuple[bool, float, float, float, str]:
+            """Try FAK sell; on no_liquidity retry with limit at bid, bid-1tick, bid-2ticks. Returns (ok, filled, avg_px, fee, fail_reason)."""
+            risk.exit_attempts_count += 1
+            res = await execu.ioc_sell(token, bid_price=bid_px, size=slice_sz)
+            if res.get("success"):
+                filled = float(res.get("filled_size") or 0.0)
+                px = float(res.get("avg_price") or bid_px)
+                fee = float(res.get("fee") or 0.0)
+                return True, filled, px, fee, ""
+            fail_reason = res.get("reason") or res.get("error") or "unknown"
+            if res.get("reason") != "no_liquidity":
+                return False, 0.0, 0.0, 0.0, fail_reason
+            logging.info("[EXIT_EXEC] mode=%s remaining_slice=%.4f bid=%.4f action=RETRY reason=no_liquidity_limit_fallback", exit_mode, slice_sz, bid_px)
+            max_ticks = 5 if exit_mode == "FORCE" else 3
+            for tick_off in range(max_ticks):
+                if exit_mode == "FORCE":
+                    limit_px = _quantize_price(max(0.01, min(0.99, bid_px - (tick_off + 1) * EXIT_TICK)))
+                else:
+                    limit_px = _quantize_price(max(0.01, min(0.99, bid_px - tick_off * EXIT_TICK)))
+                oid = await execu.place_limit_order(token, limit_px, slice_sz, SELL_SIDE)
+                if not oid:
+                    continue
+                deadline = now_s() + 3.0
+                while now_s() < deadline:
+                    info = await execu.get_order_info(oid, side=SELL_SIDE)
+                    if info:
+                        filled = float(info.get("filled_size") or 0.0)
+                        if filled >= slice_sz * 0.999:
+                            await execu.cancel_order(oid)
+                            avg_px = float(info.get("avg_price") or limit_px)
+                            fee = float(info.get("fee") or 0.0)
+                            return True, filled, avg_px, fee, ""
+                        st = str(info.get("status") or "").lower()
+                        if st in ("canceled", "cancelled", "rejected", "expired"):
+                            break
+                    await asyncio.sleep(0.2)
+                await execu.cancel_order(oid)
+            return False, 0.0, 0.0, 0.0, "no_liquidity_limit_failed"
+
         async def exit_in_slices(token: str, target_size: float) -> tuple[bool, float, float]:
             remaining = target_size
             total_notional = 0.0
             total_filled = 0.0
             total_fee = 0.0
             slices_done = 0
+            exit_mode = getattr(risk, "exit_mode", "NORMAL")
+            stuck_timeout = getattr(risk, "exit_stuck_timeout_sec", 60.0)
+            exchange_min = _min_order_size()
 
-            # Dust: do not send micro-orders; clear locally
-            if remaining < exit_dust_threshold:
-                logging.info(f"[EXIT] remaining below dust threshold -> stop slicing and clear tail (remaining={remaining:.4f} threshold={exit_dust_threshold})")
+            if remaining <= exit_dust_threshold:
+                logging.info(f"[EXIT_DUST] remaining={remaining:.4f} threshold={exit_dust_threshold} -> cleared locally")
                 posm.clear()
                 ledger.size = 0.0
-                logging.info(f"[EXIT_DUST] remaining={remaining:.4f} threshold={exit_dust_threshold} -> cleared locally")
                 return True, 0.0, 0.0
+
+            # Terminal branch: remaining below exchange minimum — no tradable sell loop
+            if remaining < exchange_min:
+                logging.info(
+                    "[EXIT_DUST] remaining=%.4f below exchange_min=%.1f -> terminal dust_tail (no retry loop)",
+                    remaining, exchange_min,
+                )
+                risk.exit_terminal_reason = "dust_tail"
+                posm.clear()
+                ledger.size = 0.0
+                return True, total_notional / total_filled if total_filled > 0 else 0.0, total_fee
 
             while remaining > 1e-9:
                 if slices_done >= exit_max_slices:
-                    logging.info(f"[EXIT_STOP] reason=max_slices remaining={remaining:.4f}")
-                    if remaining < exit_dust_threshold:
-                        logging.info(f"[EXIT_DUST] remaining={remaining:.4f} threshold={exit_dust_threshold} -> cleared locally")
+                    if remaining <= exit_dust_threshold:
                         posm.clear()
                         ledger.size = 0.0
-                        return True, 0.0, 0.0
+                        return True, total_notional / total_filled if total_filled > 0 else 0.0, total_fee
+                    if remaining < exchange_min:
+                        risk.exit_terminal_reason = "dust_tail"
+                        posm.clear()
+                        ledger.size = 0.0
+                        return True, total_notional / total_filled if total_filled > 0 else 0.0, total_fee
                     if total_filled > 0:
-                        avg_partial = total_notional / total_filled
-                        ledger.partial_close(total_filled, avg_partial, total_fee)
+                        ledger.partial_close(total_filled, total_notional / total_filled, total_fee)
                         posm.size = remaining
                     return False, 0.0, 0.0
 
-                if remaining < exit_dust_threshold:
-                    logging.info(f"[EXIT] remaining below dust threshold -> stop slicing and clear tail")
+                if remaining <= exit_dust_threshold:
                     posm.clear()
                     ledger.size = 0.0
-                    logging.info(f"[EXIT_DUST] remaining={remaining:.4f} threshold={exit_dust_threshold} -> cleared locally")
-                    return True, 0.0, 0.0
+                    return True, total_notional / total_filled if total_filled > 0 else 0.0, total_fee
+
+                if remaining < exchange_min:
+                    risk.exit_terminal_reason = "dust_tail"
+                    posm.clear()
+                    ledger.size = 0.0
+                    return True, total_notional / total_filled if total_filled > 0 else 0.0, total_fee
 
                 if not have_l1():
                     return False, 0.0, 0.0
@@ -2416,135 +3346,82 @@ async def run_bot(slug: str):
                     return False, 0.0, 0.0
                 bid_px, bid_sz = float(bid_pair[0]), float(bid_pair[1])
                 bid_liq = bid_liq_usd(token)
-                if bid_liq < exit_min_notional_usd:
-                    logging.info(f"[EXIT] bid liquidity too low for safe exit (bid_liq_usd={bid_liq:.2f} min={exit_min_notional_usd})")
-                    logging.info(f"[EXIT_STOP] reason=low_bid_liquidity remaining={remaining:.4f}")
-                    if total_filled > 0:
-                        avg_partial = total_notional / total_filled
-                        ledger.partial_close(total_filled, avg_partial, total_fee)
-                        posm.size = remaining
-                    risk.exit_blocked_dust = True
-                    risk.exit_blocked_reason = "low_bid_liquidity"
-                    risk.exit_blocked_ts = now_s()
-                    risk.exit_blocked_size = remaining
-                    logging.info("[EXIT_DUST_GUARD] residual not executable remaining=%.4f min_size=%.4f max_slice_by_book=%.4f bid_liq_usd=%.2f", remaining, exit_min_size, bid_sz * exit_max_book_share, bid_liq)
-                    return False, 0.0, 0.0
                 max_slice_by_book = bid_sz * exit_max_book_share
-                slice_sz = min(remaining, max_slice_by_book)
-                if max_slice_by_book < exit_min_size:
-                    logging.info(f"[EXIT] bid depth too small for safe exit slice (max_slice_by_book={max_slice_by_book:.4f} min={exit_min_size})")
-                    logging.info(f"[EXIT_STOP] reason=low_bid_depth remaining={remaining:.4f}")
-                    if total_filled > 0:
-                        avg_partial = total_notional / total_filled
-                        ledger.partial_close(total_filled, avg_partial, total_fee)
-                        posm.size = remaining
-                    risk.exit_blocked_dust = True
-                    risk.exit_blocked_reason = "low_bid_depth"
-                    risk.exit_blocked_ts = now_s()
-                    risk.exit_blocked_size = remaining
-                    logging.info("[EXIT_DUST_GUARD] residual not executable remaining=%.4f min_size=%.4f max_slice_by_book=%.4f bid_liq_usd=%.2f", remaining, exit_min_size, max_slice_by_book, bid_liq)
-                    return False, 0.0, 0.0
-                if slice_sz < exit_min_size:
-                    # treat as dust: stop slicing
-                    if remaining < exit_dust_threshold:
-                        logging.info(f"[EXIT_DUST] remaining={remaining:.4f} threshold={exit_dust_threshold} -> cleared locally")
+                slice_sz = min(remaining, max(exit_dust_threshold, max_slice_by_book))
+                slice_sz = _quantize_size(slice_sz, 0)
+                # Never produce executable slice below exchange minimum (avoids infinite ORDER_GUARD retry)
+                if slice_sz < exchange_min:
+                    slice_sz = min(remaining, exchange_min)
+                if slice_sz < 1e-9:
+                    if remaining <= exit_dust_threshold:
                         posm.clear()
                         ledger.size = 0.0
-                        return True, 0.0, 0.0
-                    logging.info(f"[EXIT_STOP] reason=slice_below_min_size remaining={remaining:.4f}")
-                    if total_filled > 0:
-                        avg_partial = total_notional / total_filled
-                        ledger.partial_close(total_filled, avg_partial, total_fee)
-                        posm.size = remaining
-                    risk.exit_blocked_dust = True
-                    risk.exit_blocked_reason = "slice_below_min_size"
-                    risk.exit_blocked_ts = now_s()
-                    risk.exit_blocked_size = remaining
-                    logging.info("[EXIT_DUST_GUARD] residual not executable remaining=%.4f min_size=%.4f max_slice_by_book=%.4f bid_liq_usd=%.2f", remaining, exit_min_size, max_slice_by_book, bid_liq)
-                    return False, 0.0, 0.0
-                if not _is_size_tradeable(slice_sz):
-                    logging.info(f"[ORDER_GUARD] skip sell: size below exchange minimum (slice_sz={slice_sz:.4f} min={exit_min_size})")
-                    if remaining < exit_dust_threshold:
-                        posm.clear()
-                        ledger.size = 0.0
-                        return True, 0.0, 0.0
-                    if total_filled > 0:
-                        avg_partial = total_notional / total_filled
-                        ledger.partial_close(total_filled, avg_partial, total_fee)
-                        posm.size = remaining
-                    risk.exit_blocked_dust = True
-                    risk.exit_blocked_reason = "below_exchange_min_size"
-                    risk.exit_blocked_ts = now_s()
-                    risk.exit_blocked_size = remaining
-                    logging.info("[EXIT_DUST_GUARD] residual not executable remaining=%.4f min_size=%.4f max_slice_by_book=%.4f bid_liq_usd=%.2f", remaining, exit_min_size, max_slice_by_book, bid_liq)
-                    return False, 0.0, 0.0
+                        return True, total_notional / total_filled if total_filled > 0 else 0.0, total_fee
+                    slice_sz = min(remaining, exchange_min)
+                slice_sz = _quantize_size(slice_sz, 0)
+                if slice_sz < exchange_min:
+                    risk.exit_terminal_reason = "dust_tail"
+                    posm.clear()
+                    ledger.size = 0.0
+                    return True, total_notional / total_filled if total_filled > 0 else 0.0, total_fee
 
-                logging.info(f"[EXIT_SLICE] remaining={remaining:.4f} bid_px={bid_px:.4f} bid_sz={bid_sz:.4f} slice_sz={slice_sz:.4f} bid_liq_usd={bid_liq:.2f}")
-                res = await execu.ioc_sell(token, bid_price=bid_px, size=slice_sz)
-                if not res.get("success"):
-                    exit_state["consecutive_failures"] += 1
-                    if res.get("ambiguous"):
-                        exit_state["consecutive_ambiguous"] += 1
-                    needs_reconcile = res.get("needs_reconcile") or res.get("ambiguous") or res.get("reason") == "not_enough_balance"
-                    if needs_reconcile:
+                logging.info(
+                    "[EXIT_EXEC] mode=%s remaining=%.4f slice=%.4f bid=%.4f bid_size=%.4f action=FAK reason=slice",
+                    exit_mode, remaining, slice_sz, bid_px, bid_sz,
+                )
+                ok, filled, px, fee_slice, fail_reason = await _exit_slice_once(token, slice_sz, bid_px, exit_mode)
+                risk.exit_last_fail_reason = fail_reason
+
+                if not ok:
+                    needs_reconcile = (
+                        fail_reason == "not_enough_balance"
+                        or getattr(risk, "last_reconcile_status", None) in ("absurd_ignored", "negative_ignored")
+                    )
+                    if needs_reconcile or _exit_inventory_unsafe({"reason": fail_reason, "needs_reconcile": needs_reconcile}, risk.last_reconcile_status):
+                        old_mode = risk.exit_mode
+                        risk.exit_mode = "WAIT_SETTLE"
+                        if risk.exit_wait_settle_start_ts <= 0:
+                            risk.exit_wait_settle_start_ts = now_s()
+                        logging.info("[EXIT_MODE] from=%s to=WAIT_SETTLE reason=inventory_unsafe", old_mode)
                         exit_state["last_unclear"] = True
                         exit_state["reconcile_retries"] += 1
-                        if res.get("reason") == "not_enough_balance" and posm.open_ts and (now_s() - posm.open_ts) < 120:
-                            logging.info("[EXIT_GUARD] probable settlement lag after buy")
+                        if fail_reason == "not_enough_balance" and posm.open_ts and (now_s() - posm.open_ts) < 120:
                             risk.exit_pending_reconcile = True
                             risk.exit_settlement_block_until = now_s() + risk.exit_settlement_grace_sec
-                        logging.info(f"[EXIT_RESULT] ambiguous/fail needs_reconcile (reconcile_retries={exit_state['reconcile_retries']})")
                         if exit_state["reconcile_retries"] > exit_max_reconcile_retries:
-                            logging.info("[EXIT_HARD_STOP] reason=reconcile_retry_limit")
-                            posm.closing = False
                             if total_filled > 0:
-                                avg_partial = total_notional / total_filled
-                                ledger.partial_close(total_filled, avg_partial, total_fee)
+                                ledger.partial_close(total_filled, total_notional / total_filled, total_fee)
                             posm.size = remaining
                             return False, 0.0, 0.0
                         actual, action = await reconcile_position_from_exchange(token)
                         if action in ("clear", "clear_local"):
-                            logging.info(f"[EXIT_STATE] remaining_local={remaining:.4f} remaining_actual=0 retry=cleared action={action}")
-                            avg_px = total_notional / total_filled if total_filled > 0 else 0.0
-                            return True, avg_px, total_fee
+                            return True, total_notional / total_filled if total_filled > 0 else 0.0, total_fee
                         if action == "shrink" and actual is not None:
                             remaining = actual
-                            logging.info(f"[EXIT_STATE] remaining_local={posm.size:.4f} remaining_actual={remaining:.4f} retry=reconciled")
                             continue
+                    if total_filled > 0:
+                        ledger.partial_close(total_filled, total_notional / total_filled, total_fee)
                     posm.size = remaining
-                    if total_filled > 0 and remaining > 1e-9:
-                        if remaining < exit_dust_threshold:
-                            logging.info(f"[EXIT_DUST] remaining={remaining:.4f} threshold={exit_dust_threshold} -> cleared locally")
-                            posm.clear()
-                            ledger.size = 0.0
-                            return True, 0.0, 0.0
-                        logging.info(f"[EXIT] partial exit: sold {total_filled:.4f}, remaining={remaining:.4f} -> retry later")
                     return False, 0.0, 0.0
-                filled = float(res.get("filled_size") or 0.0)
-                px = float(res.get("avg_price") or bid_px)
-                fee_slice = float(res.get("fee") or 0.0)
+
                 total_notional += filled * px
                 total_filled += filled
                 total_fee += fee_slice
                 remaining -= filled
                 slices_done += 1
-                logging.info(f"[EXIT_SLICE_FILL] filled={filled:.4f} px={px:.4f} fee={fee_slice:.4f} remaining={remaining:.4f}")
+                risk.exit_last_progress_ts = now_s()
+                logging.info("[EXIT_EXEC] mode=%s action=FILL filled=%.4f px=%.4f remaining=%.4f reason=ok", exit_mode, filled, px, remaining)
                 if filled > 0:
                     ledger.partial_close(filled, px, fee_slice)
                     posm.size = remaining
-                if remaining < exit_dust_threshold:
-                    logging.info(f"[EXIT_DUST] remaining={remaining:.4f} threshold={exit_dust_threshold} -> cleared locally")
+                if remaining <= exit_dust_threshold:
                     posm.clear()
                     ledger.size = 0.0
-                    logging.info(f"[EXIT_STATE] filled={total_filled:.4f} remaining={remaining:.4f} dust=cleared cleared=True")
-                    avg_px = total_notional / total_filled if total_filled > 0 else 0.0
-                    return True, avg_px, total_fee
-                if filled > 0 and remaining > 1e-9:
-                    delay = cfg.exit_slice_delay_sec
-                    await asyncio.sleep(max(0.05, delay))
-            logging.info(f"[EXIT_STATE] filled={total_filled:.4f} remaining={remaining:.4f} dust=no cleared=True")
-            avg_px = total_notional / total_filled if total_filled > 0 else 0.0
-            return True, avg_px, total_fee
+                    return True, total_notional / total_filled if total_filled > 0 else 0.0, total_fee
+                if filled > 0:
+                    await asyncio.sleep(max(0.05, cfg.exit_slice_delay_sec))
+
+            return True, total_notional / total_filled if total_filled > 0 else 0.0, total_fee
 
         def _check_pos_ledger_sync():
             if not posm.has_pos():
@@ -2579,6 +3456,10 @@ async def run_bot(slug: str):
                     return
                 risk.exit_blocked_dust = False
                 risk.exit_blocked_reason = ""
+                old_m = risk.exit_mode
+                risk.exit_mode = "NORMAL"
+                if old_m != "NORMAL":
+                    logging.info("[EXIT_MODE] from=%s to=NORMAL reason=retry_after_block", old_m)
             if not book_fresh(token):
                 return
 
@@ -2589,6 +3470,33 @@ async def run_bot(slug: str):
                 logging.warning(f"[LIQ] exit bid liq low token={token[:20]}... ${bid_liq_usd(token):.2f}")
                 return
 
+            if risk.exit_mode == "WAIT_SETTLE":
+                await reconcile_position_from_exchange(token)
+                if not posm.has_pos():
+                    risk.exit_in_progress = False
+                    risk.exit_pending_reconcile = False
+                    risk.exit_mode = "NORMAL"
+                    risk.exit_wait_settle_start_ts = 0.0
+                    logging.info("[EXIT_CLEAR] position cleared by WAIT_SETTLE reconcile")
+                    return
+                rec_st = getattr(risk, "last_reconcile_status", "") or ""
+                wait_settle_timeout_sec = _safe_float(os.getenv("EXIT_WAIT_SETTLE_TIMEOUT_SEC"), 120.0)
+                wait_elapsed = now_s() - (getattr(risk, "exit_wait_settle_start_ts", 0) or 0)
+                if rec_st not in ("clear", "shrink", "keep", "clear_local"):
+                    if wait_settle_timeout_sec > 0 and wait_elapsed >= wait_settle_timeout_sec:
+                        logging.info(
+                            "[EXIT_TERMINAL] reason=wait_settle_timeout elapsed=%.0fs timeout=%.0fs status=%s",
+                            wait_elapsed, wait_settle_timeout_sec, rec_st,
+                        )
+                        _terminal_cleanup("wait_settle_timeout")
+                        return
+                    logging.info("[EXIT_EXEC] mode=WAIT_SETTLE remaining=%.4f action=WAIT_SETTLE reason=inventory_not_confirmed status=%s", posm.size, rec_st)
+                    return
+                old_m = risk.exit_mode
+                risk.exit_mode = "NORMAL"
+                risk.exit_wait_settle_start_ts = 0.0
+                logging.info("[EXIT_MODE] from=WAIT_SETTLE to=NORMAL reason=inventory_confirmed")
+
             if exit_state["last_unclear"]:
                 await reconcile_position_from_exchange(token)
                 exit_state["last_unclear"] = False
@@ -2598,10 +3506,60 @@ async def run_bot(slug: str):
                     logging.info("[EXIT_CLEAR] position cleared by pre-attempt reconcile")
                     return
 
+            # Pre-exit inventory sync: avoid first sell failing with "not enough balance" when actual < local
+            actual_inv = await fetch_outcome_balance(token)
+            if actual_inv is not None:
+                eps = 1e-4
+                if actual_inv < posm.size - eps:
+                    logging.info("[EXIT] pre-exit shrink local %.4f -> actual %.4f", posm.size, actual_inv)
+                    posm.size = actual_inv
+                    ledger.size = actual_inv
+                elif actual_inv <= exit_dust_threshold and posm.size > exit_dust_threshold:
+                    posm.clear()
+                    ledger.size = 0.0
+                    risk.exit_in_progress = False
+                    risk.exit_pending_reconcile = False
+                    risk.exit_mode = "NORMAL"
+                    risk.on_market_exit(resolved_slug, None, forced=True, reason="pre_exit_actual_dust")
+                    risk.on_close()
+                    logging.info("[EXIT_CLEAR] pre-exit actual=%.4f dust -> cleared", actual_inv)
+                    return
+
+            now = now_s()
+            stuck = getattr(risk, "exit_stuck_timeout_sec", 60.0)
+            last_prog = getattr(risk, "exit_last_progress_ts", 0.0)
+            first_attempt = last_prog <= 0
+            if first_attempt:
+                risk.exit_last_progress_ts = now
+                last_prog = now
+                logging.info("[EXIT_CYCLE_RESET] reason=first_attempt_in_cycle last_progress_ts=%.1f", now)
+            delta = now - last_prog
+            rec_st = getattr(risk, "last_reconcile_status", "") or ""
+            confirmed = rec_st in ("clear", "shrink", "keep", "clear_local", "")
+            can_escalate = (
+                confirmed
+                and posm.size > exit_dust_threshold
+                and not first_attempt
+                and last_prog > 0
+                and delta >= stuck
+            )
+            logging.info(
+                "[EXIT_STUCK_CHECK] mode=%s now=%.1f last_progress=%.1f delta=%.1f timeout=%.0f escalate=%s reason=%s",
+                risk.exit_mode, now, last_prog, delta, stuck, "yes" if can_escalate else "no",
+                "stuck" if can_escalate else ("first_attempt" if first_attempt else "recent_progress"),
+            )
+            if can_escalate:
+                if risk.exit_mode == "NORMAL":
+                    risk.exit_mode = "AGGRESSIVE"
+                    logging.info("[EXIT_MODE] from=NORMAL to=AGGRESSIVE reason=no_progress_stuck timeout=%.0fs", stuck)
+                elif risk.exit_mode == "AGGRESSIVE":
+                    risk.exit_mode = "FORCE"
+                    logging.info("[EXIT_MODE] from=AGGRESSIVE to=FORCE reason=no_progress_stuck timeout=%.0fs", stuck)
+
             risk.exit_in_progress = True
             risk.exit_started_ts = now_s()
             posm.closing = True
-            logging.info(f"[EXIT_ATTEMPT] side=SELL token={token[:24]}... local_size={posm.size:.4f} reason={reason}")
+            logging.info(f"[EXIT_ATTEMPT] side=SELL token={token[:24]}... local_size={posm.size:.4f} reason={reason} mode={risk.exit_mode}")
             # If we just opened, wait for exchange to credit outcome tokens (avoids first SELL "not enough balance")
             post_buy_delay = cfg.post_buy_exit_delay_sec
             post_buy_wait_balance_sec = _safe_float(os.getenv("POST_BUY_WAIT_FOR_BALANCE_SEC"), 8.0)
@@ -2677,7 +3635,12 @@ async def run_bot(slug: str):
             else:
                 ok, avg_exit_px, exit_fee = await exit_in_slices(token, posm.size)
                 fees_in_ledger = True
+            if ok and getattr(risk, "exit_terminal_reason", None):
+                _terminal_cleanup(risk.exit_terminal_reason or "dust_tail")
+                return
             if ok:
+                entry_px = posm.entry_price
+                open_ts = posm.open_ts or 0
                 ledger.close(avg_exit_px, exit_fee if not fees_in_ledger else 0.0)
                 entry_type = getattr(posm, "entry_type", None)
                 metrics.add_closed_trade(ledger, entry_type=entry_type)
@@ -2685,16 +3648,24 @@ async def run_bot(slug: str):
                 risk.on_trade_closed(net)
                 risk.exit_in_progress = False
                 risk.exit_pending_reconcile = False
+                risk.exit_mode = "NORMAL"
+                risk.exit_attempts_count = 0
+                risk.exit_last_progress_ts = 0.0
+                risk.exit_last_fail_reason = ""
                 risk.last_close_token = token
                 risk.last_close_ts = now_s()
                 risk.last_close_pnl = net
                 risk.on_market_exit(resolved_slug, net)
                 posm.clear()
                 risk.on_close()
+                finalize_closed_market_state("success", net, resolved_slug)
                 exit_state["consecutive_failures"] = 0
                 exit_state["consecutive_ambiguous"] = 0
                 exit_state["reconcile_retries"] = 0
                 exit_state["last_unclear"] = False
+                realized_pnl_pct = ((avg_exit_px - entry_px) / max(entry_px, 1e-9)) * 100.0
+                hold_sec = now_s() - open_ts
+                logging.info("[EXIT_DONE] reason=%s exit_px=%.4f realized_pnl_pct=%.2f%% hold_sec=%.1f", reason, avg_exit_px, realized_pnl_pct, hold_sec)
                 logging.info("[EXIT_RESULT] success")
                 logging.info("[POS] closed OK")
             else:
@@ -2705,16 +3676,23 @@ async def run_bot(slug: str):
                 logging.warning("[POS] close failed -> retry later")
 
         async def decide_and_trade(expected_gen=None):
-            nonlocal last_decision_ts, last_warmup_log_ts, last_strat_debug_ts
+            nonlocal last_decision_ts, last_decision_run_ts, last_warmup_log_ts, last_strat_debug_ts
             last_decision_ts = now_s()
-            metrics.maybe_print_health(60.0, risk=risk, posm=posm, ledger=ledger)
+            t0 = now_s()
+            metrics.maybe_print_health(health_print_interval_sec, risk=risk, posm=posm, ledger=ledger)
             try:
                 await _decide_and_trade_body(expected_gen)
             finally:
                 risk._entry_in_flight = False
+                elapsed_ms = (now_s() - t0) * 1000.0
+                logging.info("[DECISION_DONE] elapsed_ms=%.0f", elapsed_ms)
 
         async def _decide_and_trade_body(expected_gen=None):
-            nonlocal last_warmup_log_ts, last_strat_debug_ts
+            nonlocal last_warmup_log_ts, last_strat_debug_ts, last_decision_ts, last_decision_run_ts, degraded_market_data, degraded_since_ts, recovered_since_ts
+            last_decision_ts = now_s()
+            last_decision_run_ts = now_s()
+            book_perf["decisions"] = book_perf.get("decisions", 0) + 1
+            heartbeat["last_strategy_eval_ts"] = now_s()
             if expected_gen is not None and market_generation_id[0] != expected_gen:
                 logging.info("[MARKET_GUARD] stale market generation ignored")
                 return
@@ -2744,67 +3722,97 @@ async def run_bot(slug: str):
                 return
 
             tte_s = tte()
+            nin = poly_stats.get("in", 0)
+            ndrop = poly_stats.get("drop", 0)
+            ws_drop = (ndrop / nin) if nin > 0 else 0.0
+            logging.info("[DECISION] tte=%s ws_drop=%.1f%% pos_open=%s", tte_s if tte_s is not None else "-", ws_drop * 100.0, posm.has_pos())
             yes_bid = best_bid(yes_token)
             yes_ask = best_ask(yes_token)
             book_age_ms = (now_s() - book[yes_token]["ts"]) * 1000.0 if book[yes_token]["ts"] else 0.0
             feats.update_mid(now_s(), mid(yes_token))
             m = build_micro(yes_bid, yes_ask, ask_liq_usd(yes_token), book_age_ms, feats)
 
-            # manage exits
+            # manage exits (stateful pipeline: only from usable_l1; hysteresis for weak reasons)
             if posm.has_pos():
+                nonlocal book_unusable_since_ts, last_exit_eval_log_ts, last_exit_signal_reason
                 token = posm.pos_token
                 if not book_fresh(token):
                     return
-                bid = best_bid(token)
+                st = active_book_state.get(token, {})
+                usable_l1 = st.get("usable_l1", False)
+                if not usable_l1:
+                    if book_unusable_since_ts == 0.0:
+                        book_unusable_since_ts = now_s()
+                    elif (now_s() - book_unusable_since_ts) * 1000.0 >= exit_on_unusable_book_ms:
+                        exit_metrics["book_unusable_exit_count"] = exit_metrics.get("book_unusable_exit_count", 0) + 1
+                        await attempt_close("book_unusable_too_long")
+                        book_unusable_since_ts = 0.0
+                    return
+                book_unusable_since_ts = 0.0
+                bid = _level_price(st.get("best_bid")) if st.get("best_bid") else None
                 if bid is None:
                     return
-                fast_exit_sec = float(os.getenv("FAST_EXIT_SEC", "35"))
-                fast_exit_mom_bps = float(os.getenv("FAST_EXIT_MOM_BPS", "4.0"))
-                min_hold_sec = float(os.getenv("MIN_HOLD_SEC", "15"))
-                 # aggressive profit-taking: allow faster exits when pnl is high
-                fast_tp_sec = float(os.getenv("FAST_TP_SEC", "10"))
-                fast_tp_pct = float(os.getenv("FAST_TP_PCT", "0.3"))
                 held_s = now_s() - (posm.open_ts or 0)
-                # hard exit near expiry: always close within last X seconds of window
-                force_exit_near_expiry_sec = float(os.getenv("FORCE_EXIT_NEAR_EXPIRY_SEC", "30"))
-                if tte_s is not None and tte_s <= force_exit_near_expiry_sec:
-                    await attempt_close("near_expiry")
-                    return
-                if m and held_s >= min_hold_sec and held_s <= fast_exit_sec:
-                    side_val = posm.side_vs_yes(yes_token)
-                    if side_val == "LONG_YES" and m.mom_bps <= -fast_exit_mom_bps:
-                        logging.info("[EXIT] fast adverse (mom)")
-                        posm._force_exit_reason = "fast_adverse"
-                    elif side_val == "LONG_NO" and m.mom_bps >= fast_exit_mom_bps:
-                        logging.info("[EXIT] fast adverse (mom)")
-                        posm._force_exit_reason = "fast_adverse"
-                # Side-aware: adverse = exit price dropped vs entry (both YES and NO: we sell at bid, loss when bid < entry)
-                early_adverse_sec = float(os.getenv("EARLY_EXIT_ADVERSE_SEC", "15"))
-                early_adverse_dol = float(os.getenv("EARLY_EXIT_ADVERSE_DOL", "0.06"))
-                if (now_s() - (posm.open_ts or 0)) <= early_adverse_sec and not posm._force_exit_reason:
-                    if (posm.entry_price - bid) >= early_adverse_dol:
-                        logging.info(f"[EXIT] early adverse (bid {bid:.3f} vs entry {posm.entry_price:.3f})")
-                        posm._force_exit_reason = "early_adverse"
-                if posm._force_exit_reason:
-                    await attempt_close(posm._force_exit_reason)
-                    posm._force_exit_reason = None
-                elif posm.should_exit_time():
-                    await attempt_close("timeout")
+                mid_px = mid(token)
+                reason = compute_exit_reason(token, bid, mid_px, tte_s, m, held_s)
+                if reason:
+                    exit_metrics["exit_signal_count"] = exit_metrics.get("exit_signal_count", 0) + 1
+                    exit_metrics["exit_reason_counts"][reason] = exit_metrics["exit_reason_counts"].get(reason, 0) + 1
+                    pnl_pct = (bid - posm.entry_price) / max(posm.entry_price, 1e-9)
+                    giveback_pct = (posm.peak_pnl_pct - pnl_pct) if posm.peak_pnl_pct > 0 else 0.0
+                    logging.info(
+                        "[EXIT_SIGNAL] reason=%s pnl_pct=%.2f%% peak_pnl_pct=%.2f%% giveback_pct=%.2f%% tte=%s hold_sec=%.1f",
+                        reason, pnl_pct * 100.0, posm.peak_pnl_pct * 100.0, giveback_pct * 100.0, tte_s, held_s,
+                    )
+                    last_exit_signal_reason = reason
+                    await attempt_close(reason)
                 else:
-                    # take-profit / stop-loss exits (limit exit only for take-profit)
-                    pnl_pct = ((bid - posm.entry_price) / max(posm.entry_price, 1e-9)) if posm.entry_price > 0 else 0.0
-                    logging.debug(f"[POS] hold={held_s:.0f}s pnl={pnl_pct:.2%} entry={posm.entry_price:.3f} bid={bid:.3f}")
-                    # fast TP: если быстро получили высокий % профита — фиксируем
-                    if held_s >= fast_tp_sec and pnl_pct >= fast_tp_pct:
-                        await attempt_close("fast_take_profit")
-                        return
-                    if pnl_pct >= posm.take_profit_pct:
-                        await attempt_close("take_profit")
-                    elif pnl_pct <= -posm.stop_loss_pct:
-                        await attempt_close("stop_loss")
+                    if now_s() - last_exit_eval_log_ts >= exit_eval_log_interval_sec:
+                        last_exit_eval_log_ts = now_s()
+                        pnl_pct = (bid - posm.entry_price) / max(posm.entry_price, 1e-9)
+                        giveback_pct = (posm.peak_pnl_pct - pnl_pct) if posm.peak_pnl_pct > 0 else 0.0
+                        logging.info(
+                            "[EXIT_EVAL] side=%s entry_px=%.4f bid=%.4f pnl_pct=%.2f%% peak_pnl_pct=%.2f%% giveback_pct=%.2f%% tte=%s usable_l1=%s trailing_armed=%s take_profit_armed=%s adverse_streak=%s thesis_streak=%s",
+                            posm.side_vs_yes(yes_token), posm.entry_price, bid, pnl_pct * 100.0, posm.peak_pnl_pct * 100.0, giveback_pct * 100.0, tte_s, usable_l1, posm.trailing_armed, posm.take_profit_armed, getattr(posm, "adverse_streak", 0), getattr(posm, "thesis_broken_streak", 0),
+                        )
                 return
 
-            # entries: single momentum strategy only
+            # entries: single momentum strategy only (block when WS feed degraded or drop rate high)
+            nin = poly_stats.get("in", 0)
+            ndrop = poly_stats.get("drop", 0)
+            ws_drop_rate = (ndrop / nin) if nin > 0 else 0.0
+            now_d = now_s()
+            if ws_drop_rate > DEGRADED_DROP_RATE:
+                if degraded_since_ts == 0.0:
+                    degraded_since_ts = now_d
+                elif (now_d - degraded_since_ts) >= DEGRADED_HOLD_SEC and not degraded_market_data:
+                    degraded_market_data = True
+                    logging.warning("[MARKET_DATA] degraded_market_data=True (drop_rate %.1f%% > %.0f%% for %.0fs)", ws_drop_rate * 100.0, DEGRADED_DROP_RATE * 100.0, DEGRADED_HOLD_SEC)
+            else:
+                degraded_since_ts = 0.0
+            if ws_drop_rate < RECOVERED_DROP_RATE:
+                if degraded_market_data:
+                    if recovered_since_ts == 0.0:
+                        recovered_since_ts = now_d
+                    elif (now_d - recovered_since_ts) >= DEGRADED_HOLD_SEC:
+                        degraded_market_data = False
+                        recovered_since_ts = 0.0
+                        logging.info("[MARKET_DATA] degraded_market_data=False (drop_rate %.1f%% < %.0f%% for %.0fs)", ws_drop_rate * 100.0, RECOVERED_DROP_RATE * 100.0, DEGRADED_HOLD_SEC)
+                else:
+                    recovered_since_ts = 0.0
+            else:
+                recovered_since_ts = 0.0
+            if degraded_market_data:
+                metrics.set_skip_reason("degraded_market_data")
+                metrics.add_reason("degraded_market_data")
+                return
+            entry_block_drop_rate = _safe_float(os.getenv("ENTRY_BLOCK_DROP_RATE"), 0.15)
+            if ws_drop_rate > entry_block_drop_rate:
+                metrics.set_skip_reason("ws_drop_high")
+                metrics.add_reason("ws_drop_high")
+                if not posm.has_pos():
+                    logging.info("[ENTRY_BLOCKED] reason=ws_drop_high drop_rate=%.1f%% threshold=%.0f%%", ws_drop_rate * 100.0, entry_block_drop_rate * 100.0)
+                return
             max_entries_per_market = _safe_int(os.getenv("MAX_ENTRIES_PER_WINDOW"), 1)
             metrics.reset_market_entries(condition_id)
             if not metrics.can_enter_market(max_entries_per_market):
@@ -2831,6 +3839,8 @@ async def run_bot(slug: str):
 
             mom_threshold_pct = cfg.mom_threshold_pct
             entry_max_spread_bps = cfg.entry_max_spread_bps
+            entry_confirmation_ticks = _safe_int(os.getenv("ENTRY_CONFIRMATION_TICKS"), 3)
+            entry_confirmation_sec = _safe_float(os.getenv("ENTRY_CONFIRMATION_SEC"), 2.0)
 
             debug_strat = os.getenv("DEBUG_STRATEGY", "0") == "1"
             if debug_strat and (now_s() - last_strat_debug_ts) > 30.0:
@@ -2839,22 +3849,82 @@ async def run_bot(slug: str):
                 tte_d = (tte_s if tte_s is not None else 0)
                 print(f"STRAT tte={tte_d:.0f} mom={mom_d:.4%}", flush=True)
 
+            def _entry_fingerprint(slug: str, side: str, mom: float, bid_px: float, ask_px: float, exec_notional: float, book_ts: float) -> str:
+                """Fingerprint for dedup: same setup => no retry until book changes."""
+                mom_bucket = round(mom * 100, 1)
+                notional_bucket = round(exec_notional, 0)
+                ts_bucket = round(book_ts, 0)
+                return f"{slug[:24]}|{side}|{mom_bucket}|{bid_px:.3f}|{ask_px:.3f}|{notional_bucket}|{ts_bucket}"
+
+            def _executable_entry(token_id: str, desired_usd: float) -> Tuple[float, float, float, bool]:
+                """Real executable (price, size, notional, ok). Uses ask side depth."""
+                a = book[token_id]["ask"]
+                if not a or len(a) < 2:
+                    return 0.0, 0.0, 0.0, False
+                ask_px = float(a[0])
+                ask_sz = float(a[1]) if a[1] else 0.0
+                if ask_px <= 0 or ask_sz <= 0:
+                    return 0.0, 0.0, 0.0, False
+                exec_notional = ask_px * ask_sz
+                desired_size = desired_usd / ask_px
+                if exec_notional >= desired_usd * 0.99:
+                    size = min(desired_size, ask_sz)
+                    notional = size * ask_px
+                    return ask_px, size, notional, True
+                if exec_notional >= 0.01:
+                    size = ask_sz
+                    notional = exec_notional
+                    return ask_px, size, notional, True
+                return ask_px, 0.0, 0.0, False
+
             async def try_entry_momentum() -> bool:
                 metrics.entry_attempts += 1
                 if _prom:
                     _prom["entry_attempts"].inc()
+                # Guard: only trade when L1 is usable (usable_l1) for both assets
+                for tid in (yes_token, no_token):
+                    st = active_book_state.get(tid, {})
+                    if not st.get("usable_l1"):
+                        logging.info("[ENTRY_BLOCKED] reason=book_not_usable detail=%s token=%s", st.get("invalid_reason") or "no_data", tid[:20] + "...")
+                        return False
                 mom = btc.move_pct(mom_lb_sec)
                 if abs(mom) < mom_threshold_pct:
                     metrics.add_reason("no_mom")
                     return False
                 want_yes = mom > 0
+                # Require signal to hold for N consecutive ticks or T seconds (anti-noise)
+                now_ts = now_s()
+                entry_momentum_history.append((now_ts, want_yes))
+                if len(entry_momentum_history) > 20:
+                    entry_momentum_history.pop(0)
+                same_tail = []
+                for (t, wy) in reversed(entry_momentum_history):
+                    if wy != want_yes:
+                        break
+                    same_tail.append((t, wy))
+                same_tail.reverse()
+                confirmed = False
+                if same_tail:
+                    span = (same_tail[-1][0] - same_tail[0][0]) if len(same_tail) > 1 else 0.0
+                    if len(same_tail) >= entry_confirmation_ticks or span >= entry_confirmation_sec:
+                        confirmed = True
+                if not confirmed:
+                    metrics.add_reason("entry_not_confirmed")
+                    return False
                 token = yes_token if want_yes else no_token
                 side = "YES" if want_yes else "NO"
-                ask_p = book[token]["ask"]
-                if not ask_p:
+                if (token == yes_token) != (side == "YES"):
+                    logging.error("[ROUTING] asset/side mismatch token_yes=%s side=%s", token == yes_token, side)
+                    return False
+                st = active_book_state.get(token, {})
+                if not st.get("usable_l1"):
+                    logging.info("[ENTRY_BLOCKED] reason=book_not_usable detail=%s side=%s", st.get("invalid_reason") or "no_data", side)
+                    return False
+                ask_px = _level_price(st.get("best_ask"))
+                if ask_px is None:
                     metrics.add_reason("no_book")
                     return False
-                ask_px = float(ask_p[0])
+                ask_px = float(ask_px)
                 if ask_liq_usd(token) < min_liq:
                     metrics.add_reason("liq")
                     return False
@@ -2865,29 +3935,56 @@ async def run_bot(slug: str):
                 if sp_bps > entry_max_spread_bps:
                     logging.info("[ENTRY_BLOCKED] reason=spread_too_wide spread_bps=%.1f max=%.1f", sp_bps, entry_max_spread_bps)
                     return False
-                bid_p = book[token]["bid"]
+                bid_p = st.get("best_bid")
                 if not bid_p:
                     logging.info("[ENTRY_BLOCKED] reason=no_bid")
                     return False
                 bid_px = float(bid_p[0])
                 bid_sz = float(bid_p[1]) if len(bid_p) >= 2 else 0.0
-                size_estimate = risk.max_usd_per_trade / max(ask_px, 1e-9)
+                desired_usd = risk.max_usd_per_trade
+                exec_px, exec_size, exec_notional, exec_ok = _executable_entry(token, desired_usd)
+                logging.info("[ENTRY_EXECUTABLE] price=%.4f size=%.4f notional=%.2f ok=%s", exec_px, exec_size, exec_notional, exec_ok)
+                if not exec_ok or exec_notional < desired_usd * 0.5:
+                    logging.info("[ENTRY_BLOCKED] reason=not_enough_executable_depth detail=exec_notional=%.2f desired=%.2f", exec_notional, desired_usd)
+                    return False
+                size_estimate = desired_usd / max(ask_px, 1e-9)
                 exit_ok, exit_reason = can_exit_position(size_estimate, bid_px, bid_sz, exit_min_size, exit_max_book_share, exit_min_notional_usd)
                 if not exit_ok:
                     logging.info("[ENTRY_BLOCKED] reason=exit_not_viable detail=%s", exit_reason)
                     return False
-                # Optional: require extra depth buffer so exit is more likely to fill (thin markets)
                 entry_strict_exit = os.getenv("ENTRY_STRICT_EXIT_VIABILITY", "0") == "1"
                 if entry_strict_exit and bid_sz < size_estimate * 1.2:
                     logging.info("[ENTRY_BLOCKED] reason=exit_not_viable detail=strict_depth (bid_sz=%.2f < 1.2*size_est=%.2f)", bid_sz, size_estimate * 1.2)
                     return False
+                backoff_rem = risk.entry_backoff_remaining(resolved_slug, side)
+                if backoff_rem > 0:
+                    logging.info("[ENTRY_BACKOFF] slug=%s side=%s wait_remaining=%.1fs", resolved_slug[:24] if len(resolved_slug) > 24 else resolved_slug, side, backoff_rem)
+                    return False
+                book_ts = st.get("last_event_ts") or 0.0
+                fp = _entry_fingerprint(resolved_slug, side, mom, bid_px, ask_px, exec_notional, book_ts)
+                if fp == risk._last_failed_entry_fingerprint and risk._last_failed_entry_reason:
+                    logging.info("[ENTRY_DEDUP] blocked reason=same_failed_setup")
+                    return False
+                entry_min_interval_sec = _safe_float(os.getenv("ENTRY_MIN_INTERVAL_SEC"), 2.5)
+                rate_rem = risk.entry_rate_limit_remaining(resolved_slug, side, entry_min_interval_sec)
+                if rate_rem > 0:
+                    return False
+                risk.record_entry_submit_ts(resolved_slug, side)
+                logging.info("[ENTRY_READ_STATE] slug=%s side=%s asset=%s bid=%.4f ask=%.4f valid=True", resolved_slug[:24] if len(resolved_slug) > 24 else resolved_slug, side, token[:24] + "..." if len(token) > 24 else token, bid_px, ask_px)
                 logging.info("[ENTRY_CHECK] signal=momentum exit_viable=True reason=ok side=%s mom=%.4f%%", side, mom * 100.0)
-                res = await execu.ioc_buy(token, ask_px, risk.max_usd_per_trade)
+                use_usd = min(desired_usd, exec_notional) if exec_notional > 0 else desired_usd
+                res = await execu.ioc_buy(token, ask_px, use_usd)
+                if res.get("reason") == "no_liquidity":
+                    risk.record_entry_no_liquidity(resolved_slug, side)
+                    risk.set_failed_entry_fingerprint(fp, "no_liquidity")
+                    return False
                 if res.get("success") and res.get("filled_size", 0) > 0:
+                    risk.clear_entry_backoff_on_success(resolved_slug, side)
+                    risk.clear_failed_entry_fingerprint()
                     entry_px = float(res.get("avg_price") or ask_px)
                     sz = res["filled_size"]
                     ledger.open(entry_px, sz, float(res.get("fee") or 0.0))
-                    posm.open(token, sz, entry_px, entry_type="momentum")
+                    posm.open(token, sz, entry_px, entry_type="momentum", entry_mid_px=mid(token))
                     metrics.record_market_entry()
                     risk.on_open()
                     risk.on_market_entry(resolved_slug, side, sz * entry_px)
@@ -2900,11 +3997,11 @@ async def run_bot(slug: str):
                 return False
 
             await try_entry_momentum()
-            metrics.maybe_print_health(60.0, risk=risk, posm=posm, ledger=ledger)
+            metrics.maybe_print_health(health_print_interval_sec, risk=risk, posm=posm, ledger=ledger)
             prom_set_state(metrics, risk)
 
         async def debounce_scheduler():
-            nonlocal consecutive_decision_errors
+            nonlocal consecutive_decision_errors, decision_scheduled_or_running
             expected_gen = market_generation_id[0]
             await asyncio.sleep(debounce_s)
             try:
@@ -2917,11 +4014,19 @@ async def run_bot(slug: str):
                     logging.critical("[DECIDE] FAIL-FAST: %s consecutive decision exceptions -> stopping bot", consecutive_decision_errors)
                     session_stop.set()
                     stop_evt.set()
+            finally:
+                decision_scheduled_or_running = False
 
         def schedule_decision():
-            nonlocal debounce_task
+            nonlocal debounce_task, decision_scheduled_or_running
+            if decision_scheduled_or_running:
+                return
             if debounce_task is not None and not debounce_task.done():
                 return
+            now = now_s()
+            if last_decision_run_ts > 0 and (now - last_decision_run_ts) < decision_min_interval_sec:
+                return
+            decision_scheduled_or_running = True
             debounce_task = asyncio.create_task(debounce_scheduler())
 
         def _merge_px_sz(new_pair, old_pair):
@@ -2935,8 +4040,7 @@ async def run_bot(slug: str):
             return (px, sz)
 
         def on_poly_msg(msg) -> bool:
-            """Process one WS msg, update book. Returns True if book updated."""
-            nonlocal book_updated_once
+            """Process one WS msg: pass only sides present in message so partial updates go to delta (no full replace). Returns True if book updated."""
             updated = False
             msgs = msg if isinstance(msg, list) else [msg]
             debug_ws = os.getenv("DEBUG_WS", "0") == "1"
@@ -2948,73 +4052,270 @@ async def run_bot(slug: str):
                 parsed = parse_book_msg(m)
                 if parsed:
                     asset_id, top_bid, top_ask = parsed
-                    if asset_id in book:
-                        if top_bid:
-                            book[asset_id]["bid"] = _merge_px_sz(top_bid, book[asset_id]["bid"])
-                        if top_ask:
-                            book[asset_id]["ask"] = _merge_px_sz(top_ask, book[asset_id]["ask"])
-                        if top_bid or top_ask:
-                            book[asset_id]["ts"] = now_s()
-                            updated = True
-                            if not book_updated_once:
-                                book_updated_once = True
-                                logging.info(f"[WS] first book update asset={asset_id[:20]}... bid={book[asset_id]['bid']} ask={book[asset_id]['ask']}")
+                    if asset_id not in book:
+                        continue
+                    cur = active_book_state.get(asset_id, {})
+                    # Pass only what the message contains so partial events trigger delta, not snapshot
+                    new_bid = _merge_px_sz(top_bid, cur.get("best_bid")) if top_bid else None
+                    new_ask = _merge_px_sz(top_ask, cur.get("best_ask")) if top_ask else None
+                    if new_bid or new_ask:
+                        apply_book_update(asset_id, new_bid, new_ask, now_s())
+                        updated = True
                     continue
                 if isinstance(m, dict) and "price_changes" in m:
                     if debug_ws and (poly_stats.get("in", 0) % 200 == 1):
                         logging.debug(f"[WS] price_changes sample: {json.dumps(m)[:300]}")
                     for aid, tb, ta in parse_price_changes(m):
-                        if aid in book:
-                            if tb:
-                                book[aid]["bid"] = _merge_px_sz(tb, book[aid]["bid"])
-                            if ta:
-                                book[aid]["ask"] = _merge_px_sz(ta, book[aid]["ask"])
-                            if tb or ta:
-                                book[aid]["ts"] = now_s()
-                                updated = True
+                        if aid not in book:
+                            continue
+                        cur = active_book_state.get(aid, {})
+                        new_bid = _merge_px_sz(tb, cur.get("best_bid")) if tb else None
+                        new_ask = _merge_px_sz(ta, cur.get("best_ask")) if ta else None
+                        if new_bid or new_ask:
+                            apply_book_update(aid, new_bid, new_ask, now_s())
+                            updated = True
             return updated
 
         async def poly_consumer():
+            nonlocal last_backpressure_ts
             while not session_stop.is_set():
                 try:
                     msg = await asyncio.wait_for(poly_q.get(), timeout=1.0)
                 except asyncio.TimeoutError:
                     continue
-                if on_poly_msg(msg) and (now_s() - last_decision_ts) >= debounce_s:
+                heartbeat["last_wsq_progress_ts"] = now_s()
+                heartbeat["last_wsq_in"] = poly_stats.get("in", 0)
+                updated = False
+                if msg == "tick" and pending_book_by_asset:
+                    for aid, (bid, ask, ts) in list(pending_book_by_asset.items()):
+                        if aid in book:
+                            apply_book_update(aid, bid, ask, ts)
+                            updated = True
+                    pending_book_by_asset.clear()
+                elif isinstance(msg, dict):
+                    updated = on_poly_msg(msg)
+                if updated and not decision_on_timer_only and (now_s() - last_decision_ts) >= debounce_s:
+                    nin = poly_stats.get("in", 0)
+                    ndrop = poly_stats.get("drop", 0)
+                    ws_drop_rate = (ndrop / nin) if nin > 0 else 0.0
+                    if ws_drop_rate > 0.05:
+                        now_bp = now_s()
+                        if now_bp - last_backpressure_ts >= 0.5:
+                            last_backpressure_ts = now_bp
+                            await asyncio.sleep(0.15)
                     schedule_decision()
 
+        wsq_log_interval_sec = 5.0
+        wsq_drop_threshold = _safe_float(os.getenv("ENTRY_BLOCK_DROP_RATE"), 0.15)
+        last_wsq_log_ts = 0.0
+        last_wsq_drop_above = False
+
         async def wsq_logger():
-            last = 0.0
+            nonlocal last_wsq_log_ts, last_wsq_drop_above
+            await asyncio.sleep(2.0)
             while not session_stop.is_set():
-                await asyncio.sleep(5)
+                await asyncio.sleep(wsq_log_interval_sec)
                 if session_stop.is_set():
                     break
-                if now_s() - last >= 4.9:
-                    last = now_s()
-                    logging.info(f"[WSQ] in={poly_stats.get('in',0)} drop={poly_stats.get('drop',0)} qsize={poly_q.qsize()}")
+                now = now_s()
+                nin = poly_stats.get("in", 0)
+                ndrop = poly_stats.get("drop", 0)
+                drop_rate = (ndrop / nin) if nin > 0 else 0.0
+                above = drop_rate > wsq_drop_threshold
+                should_log = (now - last_wsq_log_ts >= wsq_log_interval_sec) or (above != last_wsq_drop_above)
+                if should_log:
+                    last_wsq_log_ts = now
+                    last_wsq_drop_above = above
+                    logging.info("[WSQ] in=%s drop=%s qsize=%s drop_rate=%.1f%%", nin, ndrop, poly_q.qsize(), drop_rate * 100.0)
+                    if above:
+                        logging.warning("[WSQ] high drop rate %.1f%% (entries blocked when >%.0f%%)", drop_rate * 100.0, wsq_drop_threshold * 100.0)
+
+        def reset_market_runtime_state() -> None:
+            """Clear all runtime market state so next session starts clean."""
+            nonlocal book_updated_once, degraded_market_data, degraded_since_ts, recovered_since_ts
+            book_updated_once = False
+            active_book_state.clear()
+            book_last_invalid_log_ts.clear()
+            book_last_state_log_ts.clear()
+            book_bad_streak.clear()
+            book_first_bad_ts.clear()
+            entry_momentum_history.clear()
+            pending_book_by_asset.clear()
+            degraded_market_data = False
+            degraded_since_ts = 0.0
+            recovered_since_ts = 0.0
+            for tid in (yes_token, no_token):
+                book[tid]["bid"] = None
+                book[tid]["ask"] = None
+                book[tid]["ts"] = 0.0
+            book_seq[0] = 0
+            heartbeat["last_book_update_ts"] = 0.0
+            heartbeat["book_feed_primed"] = False
+            risk.clear_failed_entry_fingerprint()
+            risk.clear_entry_backoff_on_new_slug("")
+            logging.info("[RECOVER_RESET] cleared fields=active_book_state,book,book_seq,heartbeat_book,entry_backoff,entry_fingerprint")
+
+        def hard_recover_data_plane(reason: str) -> None:
+            """Signal full data-plane recovery: exit session and re-resolve market."""
+            logging.warning("[RECOVER] start reason=%s", reason)
+            reset_market_runtime_state()
+            recovery_required_evt.set()
+
+        def refresh_market_after_expiry() -> None:
+            """Signal market refresh (same as 404 path): session will end and outer loop will re-resolve."""
+            logging.info("[MARKET_REFRESH] signalling refresh (expiry/recovery)")
+            recovery_required_evt.set()
+
+        btc_feed_stale_sec = _safe_float(os.getenv("BTC_FEED_STALE_SEC"), 8.0)
+        book_feed_stale_sec = _safe_float(os.getenv("BOOK_FEED_STALE_SEC"), 8.0)
+        strategy_stale_sec = _safe_float(os.getenv("STRATEGY_STALE_SEC"), 12.0)
+        wsq_stall_sec = _safe_float(os.getenv("WSQ_STALL_SEC"), 15.0)
+        market_recovery_confirm_sec = _safe_float(os.getenv("MARKET_RECOVERY_CONFIRM_SEC"), 10.0)
+
+        async def watchdog_loop():
+            await asyncio.sleep(3.0)
+            while not session_stop.is_set():
+                await asyncio.sleep(2.0)
+                if session_stop.is_set():
+                    break
+                now = now_s()
+                if btc_feed_stale_sec > 0 and (now - heartbeat.get("last_btc_tick_ts", 0)) > btc_feed_stale_sec:
+                    if not heartbeat.get("btc_feed_primed", False):
+                        logging.info("[WATCHDOG] btc stale skipped: not primed")
+                    else:
+                        logging.warning("[WATCHDOG] btc stale -> reconnect")
+                        reconnect_btc_evt.set()
+                if book_feed_stale_sec > 0 and (now - heartbeat.get("last_book_update_ts", 0)) > book_feed_stale_sec:
+                    if not heartbeat.get("book_feed_primed", False):
+                        logging.info("[WATCHDOG] book stale skipped: not primed")
+                    else:
+                        logging.warning("[WATCHDOG] book stale -> reconnect")
+                        reconnect_market_evt.set()
+                if strategy_stale_sec > 0 and not getattr(risk, "exit_in_progress", False):
+                    if (now - heartbeat.get("last_strategy_eval_ts", 0)) > strategy_stale_sec:
+                        logging.warning("[WATCHDOG] strategy stalled -> force tick")
+                        schedule_decision()
+                        if btc.last is None or not have_l1():
+                            reconnect_btc_evt.set()
+                            reconnect_market_evt.set()
+                if wsq_stall_sec > 0 and not getattr(risk, "exit_in_progress", False):
+                    wsq_idle = (now - heartbeat.get("last_wsq_progress_ts", 0)) > wsq_stall_sec
+                    book_idle = (now - heartbeat.get("last_book_update_ts", 0)) > book_feed_stale_sec
+                    if poly_q.qsize() == 0 and wsq_idle:
+                        if book_idle:
+                            logging.warning("[WATCHDOG] wsq stalled -> hard recover (book also stale)")
+                            hard_recover_data_plane("wsq_stalled")
+                        else:
+                            logging.info("[WATCHDOG] wsq low activity -> no recover (book still updating)")
+
+        async def recovery_confirm_loop():
+            """If no book/btc data within MARKET_RECOVERY_CONFIRM_SEC after session start, trigger recovery."""
+            while not session_stop.is_set():
+                await asyncio.sleep(2.0)
+                if session_stop.is_set():
+                    break
+                if market_recovery_confirm_sec <= 0:
+                    continue
+                elapsed = now_s() - session_start_ts
+                if elapsed < market_recovery_confirm_sec:
+                    continue
+                has_book = book_updated_once
+                has_btc = btc.last is not None
+                if not has_book or not has_btc:
+                    logging.warning("[RECOVER] failed reason=post-expiry-no-data elapsed=%.0f book=%s btc=%s", elapsed, has_book, has_btc)
+                    hard_recover_data_plane("post-expiry-no-data")
+                break
+
+        async def book_state_summary_loop():
+            """Log a short BOOK_STATE summary every BOOK_STATE_SUMMARY_INTERVAL_SEC (default 15s). Stagger start."""
+            await asyncio.sleep(7.0)
+            while not session_stop.is_set():
+                await asyncio.sleep(max(1.0, book_state_summary_interval_sec))
+                if session_stop.is_set():
+                    break
+                parts = []
+                for aid, st in list(active_book_state.items()):
+                    usable = st.get("usable_l1", False)
+                    reason = st.get("invalid_reason") or "-"
+                    bid_px, _, _ = normalize_level(st.get("best_bid"))
+                    ask_px, _, _ = normalize_level(st.get("best_ask"))
+                    parts.append("%s: usable_l1=%s bid=%s ask=%s reason=%s" % (aid[:20] + "..", usable, bid_px, ask_px, reason))
+                if parts:
+                    logging.info("[BOOK_STATE] summary %s", " | ".join(parts))
+
+        async def decision_timer_loop():
+            """When DECISION_ON_TIMER_ONLY=1: run decision on fixed interval; WS only updates book."""
+            await asyncio.sleep(1.0)
+            while not session_stop.is_set():
+                await asyncio.sleep(decision_timer_interval_sec)
+                if session_stop.is_set():
+                    break
+                schedule_decision()
+
+        async def perf_logger_loop():
+            """Log [PERF] every 10s: updates_in, updates_applied, updates_skipped_same_tob, decisions."""
+            await asyncio.sleep(5.0)
+            while not session_stop.is_set():
+                await asyncio.sleep(perf_log_interval_sec)
+                if session_stop.is_set():
+                    break
+                now = now_s()
+                book_perf["last_perf_log_ts"] = now
+                bm = book_metrics
+                em = exit_metrics
+                logging.info(
+                    "[PERF] updates_in=%s updates_applied=%s updates_skipped_same_tob=%s decisions=%s usable_l1_true=%s usable_l1_false=%s invalid_transitions=%s hysteresis_blocked=%s partial_preserved=%s exit_eval=%s exit_signal=%s exit_reasons=%s trailing_armed=%s tp_armed=%s hard_stop=%s time_decay_exit=%s book_unusable_exit=%s exit_hysteresis_blocked=%s",
+                    poly_stats.get("in", 0),
+                    book_perf.get("updates_applied", 0),
+                    book_perf.get("updates_skipped_same_tob", 0),
+                    book_perf.get("decisions", 0),
+                    bm.get("usable_l1_true", 0),
+                    bm.get("usable_l1_false", 0),
+                    bm.get("invalid_transitions", 0),
+                    bm.get("hysteresis_blocked_invalidations", 0),
+                    bm.get("partial_updates_preserved_side", 0),
+                    em.get("exit_eval_count", 0),
+                    em.get("exit_signal_count", 0),
+                    em.get("exit_reason_counts", {}),
+                    em.get("trailing_armed_count", 0),
+                    em.get("take_profit_armed_count", 0),
+                    em.get("hard_stop_count", 0),
+                    em.get("time_decay_exit_count", 0),
+                    em.get("book_unusable_exit_count", 0),
+                    em.get("exit_hysteresis_blocked_count", 0),
+                )
 
     # background tasks
         asset_ids = [yes_token, no_token]
         tasks = [
-            asyncio.create_task(btc_ws_loop(btc, session_stop)),
+            asyncio.create_task(btc_ws_loop(btc, session_stop, heartbeat=heartbeat, reconnect_evt=reconnect_btc_evt)),
             asyncio.create_task(risk.background_updater(session_stop)),
             asyncio.create_task(poll_l1_books(
                 client, [yes_token, no_token], book, session_stop, l1_poll_sec,
                 market_expired_evt=market_expired_evt,
+                heartbeat=heartbeat,
+                on_book_update=apply_book_update,
             )),
-            asyncio.create_task(poly_ws_producer(asset_ids, session_stop, poly_q, poly_stats)),
+            asyncio.create_task(poly_ws_producer(asset_ids, session_stop, poly_q, poly_stats, heartbeat=heartbeat, reconnect_evt=reconnect_market_evt, pending_book_by_asset=pending_book_by_asset)),
             asyncio.create_task(poly_consumer()),
             asyncio.create_task(wsq_logger()),
+            asyncio.create_task(watchdog_loop()),
+            asyncio.create_task(recovery_confirm_loop()),
+            asyncio.create_task(book_state_summary_loop()),
+            asyncio.create_task(perf_logger_loop()),
         ]
+        if decision_on_timer_only:
+            tasks.append(asyncio.create_task(decision_timer_loop()))
 
         async def wait_for_session_end():
             stop_task = asyncio.create_task(session_stop.wait())
             exp_task = asyncio.create_task(market_expired_evt.wait())
+            rec_task = asyncio.create_task(recovery_required_evt.wait())
             done, _ = await asyncio.wait(
-                [stop_task, exp_task],
+                [stop_task, exp_task, rec_task],
                 return_when=asyncio.FIRST_COMPLETED,
             )
-            for t in (stop_task, exp_task):
+            for t in (stop_task, exp_task, rec_task):
                 t.cancel()
 
         await wait_for_session_end()
@@ -3027,6 +4328,9 @@ async def run_bot(slug: str):
             if posm.has_pos():
                 await attempt_close("market_expired")
             logging.info("[MARKET] expired (404) -> refreshing to next window")
+        if recovery_required_evt.is_set():
+            session_stop.set()
+            logging.info("[RECOVER] success reason=recovery_required -> re-resolving market")
 
         # session cleanup
         session_stop.set()
